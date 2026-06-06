@@ -8,10 +8,10 @@ import Link from 'next/link'
 
 interface Notification {
   id: string
+  type: 'success' | 'warning' | 'info'
   title: string
   message: string
   time: string
-  type: 'info' | 'success' | 'warning'
   read: boolean
 }
 
@@ -21,43 +21,14 @@ export default function Topbar() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
+  const [notifications] = useState<Notification[]>([
+    { id: '1', type: 'warning', title: 'Approval Required', message: 'QUO-2026-00021 from MetroSoft awaiting L2 approval.', time: '5m ago', read: false },
+    { id: '2', type: 'success', title: 'PO Fulfilled', message: 'PO-2026-00010 (Office Furniture) marked fulfilled.', time: '2h ago', read: false },
+    { id: '3', type: 'info', title: 'RFQ Deadline Soon', message: 'RFQ-2026-00044 closes in 12 days.', time: '4h ago', read: true },
+  ])
   const notifRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'Quotation Awarded',
-      message: 'RFQ-2026-00042 has been awarded to Apex Tech Solutions.',
-      time: '10 mins ago',
-      type: 'success',
-      read: false
-    },
-    {
-      id: '2',
-      title: 'Approval Required',
-      message: 'Manager approval requested for Purchase Order PO-2026-00009.',
-      time: '1 hour ago',
-      type: 'warning',
-      read: false
-    },
-    {
-      id: '3',
-      title: 'New Vendor Registered',
-      message: 'Swift Logistics submitted their compliance documents for verification.',
-      time: '3 hours ago',
-      type: 'info',
-      read: true
-    }
-  ])
-
-  const unreadCount = notifications.filter(n => !n.read).length
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })))
-  }
-
-  // Close dropdowns on outside click
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) setShowNotifications(false)
@@ -67,153 +38,237 @@ export default function Topbar() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { setShowNotifications(false); setShowUserMenu(false) }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   const handleLogout = async () => {
     setLoggingOut(true)
     setShowUserMenu(false)
     await logout()
-    // router.replace prevents going back to dashboard via browser back button
-    // router.refresh() clears Next.js RSC cache so stale dashboard content is gone
     router.replace('/login')
     router.refresh()
   }
 
+  const unread = notifications.filter(n => !n.read).length
+  const notifIcon = { success: CheckCircle2, warning: AlertCircle, info: Clock }
+  const notifColor = {
+    success: { icon: 'var(--success)', bg: 'var(--success-subtle)' },
+    warning: { icon: 'var(--warning)', bg: 'var(--warning-subtle)' },
+    info:    { icon: 'var(--info)',    bg: 'var(--info-subtle)' },
+  }
+
   return (
-    <header className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-40">
-      {/* Search Bar */}
-      <div className="relative w-96 max-w-lg group">
-        <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
-        </span>
+    <header style={{
+      height: '64px', display: 'flex', alignItems: 'center',
+      padding: '0 24px', gap: '16px',
+      background: 'var(--bg-surface)',
+      borderBottom: '1px solid var(--border-default)',
+      flexShrink: 0, position: 'sticky', top: 0, zIndex: 40,
+    }}>
+      {/* Search */}
+      <div style={{ position: 'relative', width: '320px' }}>
+        <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
         <input
-          type="text"
-          placeholder="Search RFQs, vendors, purchase orders..."
-          className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+          placeholder="Search vendors, RFQs, orders…"
+          style={{
+            width: '100%', height: '36px',
+            background: 'var(--bg-elevated)',
+            border: '1px solid var(--border-default)',
+            borderRadius: '8px', padding: '0 12px 0 34px',
+            fontFamily: 'var(--font-body)', fontSize: '13px',
+            color: 'var(--text-primary)', outline: 'none',
+            transition: 'border-color 150ms',
+          }}
+          onFocus={e => (e.currentTarget.style.borderColor = 'var(--accent)')}
+          onBlur={e => (e.currentTarget.style.borderColor = 'var(--border-default)')}
         />
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex items-center gap-4">
-        {/* Notification Bell */}
-        <div className="relative" ref={notifRef}>
-          <button
-            onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false) }}
-            className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-slate-50 rounded-full transition-all relative cursor-pointer"
-          >
-            <Bell size={20} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-bounce">
-                {unreadCount}
-              </span>
-            )}
-          </button>
+      <div style={{ flex: 1 }} />
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-                <span className="text-sm font-semibold text-slate-800">Notifications</span>
-                {unreadCount > 0 && (
-                  <button onClick={markAllAsRead} className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 cursor-pointer">
-                    Mark all as read
-                  </button>
-                )}
-              </div>
-              <div className="max-h-72 overflow-y-auto">
-                {notifications.length > 0 ? (
-                  notifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`px-4 py-3 border-b border-slate-50 hover:bg-slate-50 transition-colors flex gap-3 ${!notif.read ? 'bg-indigo-50/20' : ''}`}
-                    >
-                      <div className="shrink-0 mt-0.5">
-                        {notif.type === 'success' && <CheckCircle2 size={16} className="text-emerald-500" />}
-                        {notif.type === 'warning' && <Clock size={16} className="text-amber-500" />}
-                        {notif.type === 'info' && <AlertCircle size={16} className="text-blue-500" />}
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-slate-800">{notif.title}</p>
-                        <p className="text-[11px] text-slate-500 mt-0.5 leading-normal">{notif.message}</p>
-                        <span className="text-[10px] text-slate-400 mt-1 block">{notif.time}</span>
-                      </div>
-                      {!notif.read && <span className="w-2 h-2 bg-indigo-500 rounded-full shrink-0 mt-1" />}
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-6 text-center text-xs text-slate-400">No new notifications</div>
-                )}
-              </div>
-            </div>
+      {/* Notifications */}
+      <div ref={notifRef} style={{ position: 'relative' }}>
+        <button
+          onClick={() => { setShowNotifications(!showNotifications); setShowUserMenu(false) }}
+          style={{
+            width: '36px', height: '36px', borderRadius: '8px',
+            background: showNotifications ? 'var(--bg-elevated)' : 'transparent',
+            border: '1px solid',
+            borderColor: showNotifications ? 'var(--border-strong)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', position: 'relative', transition: 'all 150ms',
+            color: 'var(--text-secondary)',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)' }}
+          onMouseLeave={e => { if (!showNotifications) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+        >
+          <Bell size={16} />
+          {unread > 0 && (
+            <span style={{
+              position: 'absolute', top: '6px', right: '6px',
+              width: '8px', height: '8px', borderRadius: '50%',
+              background: 'var(--accent)',
+              boxShadow: '0 0 6px rgba(245,158,11,0.5)',
+            }} />
           )}
-        </div>
+        </button>
 
-        {/* User Dropdown */}
-        <div className="relative" ref={userMenuRef}>
-          {loading ? (
-            <div className="flex items-center gap-2.5 px-3 py-1.5">
-              <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
-              <div className="hidden sm:block space-y-1">
-                <div className="w-24 h-3 bg-slate-200 rounded animate-pulse" />
-                <div className="w-16 h-2 bg-slate-100 rounded animate-pulse" />
-              </div>
+        {showNotifications && (
+          <div className="modal-enter" style={{
+            position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+            width: '340px',
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-strong)',
+            borderRadius: '12px',
+            boxShadow: 'var(--shadow-lg)',
+            overflow: 'hidden', zIndex: 50,
+          }}>
+            <div style={{
+              padding: '14px 16px', borderBottom: '1px solid var(--border-default)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: '14px', color: 'var(--text-primary)' }}>Notifications</span>
+              {unread > 0 && <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 500, color: 'var(--accent)', background: 'var(--accent-subtle)', borderRadius: '99px', padding: '2px 8px' }}>{unread} new</span>}
             </div>
-          ) : user ? (
-            <>
-              <button
-                onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false) }}
-                className="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
-              >
-                {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm">
-                    {(user.full_name || 'U').charAt(0).toUpperCase()}
+            <div style={{ maxHeight: '280px', overflowY: 'auto' }} className="custom-scrollbar">
+              {notifications.map(n => {
+                const Icon = notifIcon[n.type]
+                const c = notifColor[n.type]
+                return (
+                  <div key={n.id} style={{
+                    padding: '12px 16px', borderBottom: '1px solid var(--border-default)',
+                    display: 'flex', gap: '12px', alignItems: 'flex-start',
+                    background: n.read ? 'transparent' : 'var(--accent-subtle)',
+                    transition: 'background 150ms', cursor: 'pointer',
+                  }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = n.read ? 'transparent' : 'var(--accent-subtle)'}
+                  >
+                    <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: c.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Icon size={13} style={{ color: c.icon }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '12px', color: 'var(--text-primary)' }}>{n.title}</div>
+                      <div style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', lineHeight: 1.4 }}>{n.message}</div>
+                      <div style={{ fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>{n.time}</div>
+                    </div>
                   </div>
-                )}
-                <div className="text-left hidden sm:block">
-                  <span className="text-sm font-semibold text-slate-800 block leading-tight">{user.full_name}</span>
-                  <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">{user.department || user.role?.replace('_', ' ')}</span>
-                </div>
-                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
-              {showUserMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                    <p className="text-xs font-bold text-slate-800 truncate">{user.full_name}</p>
-                    <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
-                    <span className={`inline-flex mt-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
-                      user.role === 'admin' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                      user.role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      user.role === 'vendor' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                      'bg-indigo-50 text-indigo-700 border-indigo-200'
-                    }`}>
-                      {user.role?.replace('_', ' ')}
-                    </span>
-                  </div>
-                  <div className="py-1">
-                    <Link href="/profile" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
-                      <User size={15} className="text-slate-400" /> View Profile
-                    </Link>
-                    <Link href="/profile?tab=security" onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
-                      <Settings size={15} className="text-slate-400" /> Settings
-                    </Link>
-                  </div>
-                  <div className="py-1 border-t border-slate-100">
-                    <button
-                      onClick={handleLogout}
-                      disabled={loggingOut}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-60"
-                    >
-                      {loggingOut ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
-                      {loggingOut ? 'Signing out...' : 'Sign Out'}
-                    </button>
-                  </div>
+      {/* User Menu */}
+      <div ref={userMenuRef} style={{ position: 'relative' }}>
+        {loading ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '0 8px' }}>
+            <div className="skeleton" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            <div className="skeleton" style={{ width: '80px', height: '12px', borderRadius: '4px' }} />
+          </div>
+        ) : user ? (
+          <>
+            <button
+              onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false) }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '10px',
+                padding: '6px 10px 6px 6px', borderRadius: '10px',
+                background: showUserMenu ? 'var(--bg-elevated)' : 'transparent',
+                border: '1px solid',
+                borderColor: showUserMenu ? 'var(--border-strong)' : 'transparent',
+                cursor: 'pointer', transition: 'all 150ms',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-default)' }}
+              onMouseLeave={e => { if (!showUserMenu) { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.borderColor = 'transparent' } }}
+            >
+              {user.avatar_url ? (
+                <img src={user.avatar_url} alt={user.full_name} style={{ width: '30px', height: '30px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-strong)' }} />
+              ) : (
+                <div style={{
+                  width: '30px', height: '30px', borderRadius: '50%', flexShrink: 0,
+                  background: 'linear-gradient(135deg, var(--accent) 0%, #D97706 100%)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '12px',
+                  color: 'var(--text-inverse)',
+                }}>
+                  {(user.full_name || 'U').charAt(0).toUpperCase()}
                 </div>
               )}
-            </>
-          ) : null}
-        </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.2 }}>{user.full_name}</div>
+                <div style={{ fontFamily: 'var(--font-body)', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 500 }}>{user.role?.replace('_', ' ')}</div>
+              </div>
+              <ChevronDown size={12} style={{ color: 'var(--text-muted)', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 200ms', marginLeft: '2px' }} />
+            </button>
+
+            {showUserMenu && (
+              <div className="modal-enter" style={{
+                position: 'absolute', right: 0, top: 'calc(100% + 8px)',
+                width: '220px',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-strong)',
+                borderRadius: '12px',
+                boxShadow: 'var(--shadow-lg)',
+                overflow: 'hidden', zIndex: 50,
+              }}>
+                <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border-default)', background: 'var(--bg-elevated)' }}>
+                  <div style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.full_name}</div>
+                  <div style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                  <span style={{
+                    display: 'inline-flex', marginTop: '6px',
+                    fontFamily: 'var(--font-mono)', fontSize: '9px', fontWeight: 600,
+                    textTransform: 'uppercase', letterSpacing: '0.06em',
+                    padding: '2px 7px', borderRadius: '99px',
+                    background: user.role === 'admin' ? 'rgba(239,68,68,0.1)' : user.role === 'manager' ? 'rgba(245,158,11,0.1)' : 'rgba(59,130,246,0.1)',
+                    color: user.role === 'admin' ? '#F87171' : user.role === 'manager' ? '#FBBF24' : '#60A5FA',
+                    border: '1px solid',
+                    borderColor: user.role === 'admin' ? 'rgba(239,68,68,0.2)' : user.role === 'manager' ? 'rgba(245,158,11,0.2)' : 'rgba(59,130,246,0.2)',
+                  }}>{user.role?.replace('_', ' ')}</span>
+                </div>
+                {[
+                  { href: '/profile', icon: User, label: 'View Profile' },
+                  { href: '/profile?tab=security', icon: Settings, label: 'Settings' },
+                ].map(item => (
+                  <Link key={item.href} href={item.href} onClick={() => setShowUserMenu(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 16px', textDecoration: 'none',
+                      fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500,
+                      color: 'var(--text-secondary)', transition: 'all 150ms',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)'; (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'transparent'; (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)' }}
+                  >
+                    <item.icon size={14} />
+                    {item.label}
+                  </Link>
+                ))}
+                <div style={{ borderTop: '1px solid var(--border-default)' }}>
+                  <button onClick={handleLogout} disabled={loggingOut}
+                    style={{
+                      width: '100%', display: 'flex', alignItems: 'center', gap: '10px',
+                      padding: '10px 16px', border: 'none', background: 'transparent',
+                      fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600,
+                      color: 'var(--danger)', cursor: loggingOut ? 'not-allowed' : 'pointer',
+                      opacity: loggingOut ? 0.6 : 1, transition: 'background 150ms',
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--danger-subtle)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                  >
+                    {loggingOut ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <LogOut size={14} />}
+                    {loggingOut ? 'Signing out…' : 'Sign Out'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        ) : null}
       </div>
     </header>
   )
