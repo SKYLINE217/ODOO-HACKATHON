@@ -103,10 +103,10 @@ export default function LoginPage() {
       if (profile) {
         // Clear real Supabase session cookies to avoid conflicts
         for (const name of ['sb-access-token', 'sb-refresh-token']) {
-          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
         }
-        // Set bypass cookie, then hard-navigate so cookie is sent with the request
-        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+        // Set bypass cookie with SameSite=Lax for Vercel HTTPS compatibility
+        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; SameSite=Lax`
         window.location.href = '/'
         return
       }
@@ -148,7 +148,7 @@ export default function LoginPage() {
             onboarded: localUser.onboarded ?? false
           }
 
-          document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+          document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; SameSite=Lax`
           window.location.href = '/'
           return
         }
