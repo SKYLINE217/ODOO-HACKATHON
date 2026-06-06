@@ -5,12 +5,11 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Building2, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
-import { useAuthStore } from '@/stores/useAuthStore'
 
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
-  const setUser = useAuthStore(state => state.setUser)
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -59,64 +58,12 @@ export default function LoginPage() {
       }
 
       if (data?.user) {
-        // Fetch profile details
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
-
-        setUser({
-          id: data.user.id,
-          full_name: profile?.full_name || data.user.user_metadata?.full_name || 'System User',
-          email: data.user.email || email,
-          role: profile?.role || data.user.user_metadata?.role || 'procurement_officer',
-          avatar_url: profile?.avatar_url || null,
-          department: profile?.department || null
-        })
-
-        window.location.href = '/'
+        // Profile will be fetched by useAuth automatically — just navigate
+        router.replace('/')
+        router.refresh()
       }
     } catch (err: any) {
-      console.warn('Supabase Auth credentials failed/unconfirmed, checking local registry:', err?.message)
-      
-      // Bypass check: check if user registered in local registry
-      const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
-      const localUser = usersRegistry[email.toLowerCase()]
-
-      if (localUser) {
-        // Successful mock sign in with user's selected role
-        const profile = {
-          id: 'mock-' + Math.random().toString(36).substring(2, 9),
-          full_name: localUser.full_name,
-          email: email,
-          role: localUser.role,
-          avatar_url: null,
-          department: localUser.role === 'procurement_officer' ? 'Procurement' : localUser.role === 'manager' ? 'Management' : null
-        }
-        
-        // Set cookie for middleware bypass
-        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
-        
-        setUser(profile)
-        window.location.href = '/'
-      } else {
-        // Fallback: Login with mock administrator details so they are never locked out
-        const profile = {
-          id: 'demo-user-id',
-          full_name: 'Alex Mercer',
-          email: email || 'alex.mercer@vendorbridge.io',
-          role: 'admin' as const,
-          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-          department: 'Procurement & Logistics'
-        }
-
-        // Set cookie for middleware bypass
-        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
-
-        setUser(profile)
-        window.location.href = '/'
-      }
+      setErrorText(err.message?.includes('Invalid login') ? 'Incorrect email or password.' : (err.message || 'Sign-in failed. Check your credentials.'))
     } finally {
       setLoading(false)
     }

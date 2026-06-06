@@ -4,9 +4,12 @@ import { createClient } from '@/utils/supabase/client'
 
 const supabase = createClient()
 
-// Fetch profile, creating it if it doesn't exist yet (handles Google OAuth race)
-async function fetchOrCreateProfile(userId: string, fallbackEmail: string, fallbackName: string): Promise<UserProfile | null> {
-  // 1. Try fetching existing profile
+// Try to fetch profile from DB; upsert if missing (handles Google OAuth race)
+async function fetchOrCreateProfile(
+  userId: string,
+  fallbackEmail: string,
+  fallbackName: string,
+): Promise<UserProfile | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
     .select('id, full_name, email, role, avatar_url, department')
@@ -15,8 +18,8 @@ async function fetchOrCreateProfile(userId: string, fallbackEmail: string, fallb
 
   if (profile && !error) return profile as UserProfile
 
-  // 2. Profile missing (Google OAuth trigger may not have fired yet) — upsert it
-  const { data: upserted, error: upsertError } = await supabase
+  // Profile missing — upsert it (Google OAuth trigger may not have fired yet)
+  const { data: upserted } = await supabase
     .from('profiles')
     .upsert({
       id: userId,
@@ -27,8 +30,20 @@ async function fetchOrCreateProfile(userId: string, fallbackEmail: string, fallb
     .select('id, full_name, email, role, avatar_url, department')
     .single()
 
-  if (upserted && !upsertError) return upserted as UserProfile
-  return null
+  return (upserted as UserProfile | null) ?? null
+}
+
+// Build a minimal user object directly from the Supabase session (no DB needed)
+function sessionToUser(session: any): UserProfile {
+  const meta = session.user.user_metadata || {}
+  return {
+    id: session.user.id,
+    full_name: meta.full_name || meta.name || session.user.email?.split('@')[0] || 'User',
+    email: session.user.email || '',
+    role: (meta.role as UserProfile['role']) || 'procurement_officer',
+    avatar_url: meta.avatar_url || meta.picture || null,
+    department: null,
+  }
 }
 
 export function useAuth() {
@@ -43,7 +58,7 @@ export function useAuth() {
       try {
         setLoading(true)
 
-        // Check bypass cookie (dev mode only)
+        // Dev bypass cookie
         if (typeof window !== 'undefined') {
           const bypassCookie = document.cookie
             .split('; ')
@@ -68,18 +83,27 @@ export function useAuth() {
           }
         }
 
-        // Check existing Supabase session (handles page refresh)
+        // Get Supabase session
         const { data: { session } } = await supabase.auth.getSession()
+
         if (session?.user) {
-          // Google OAuth stores name as 'name', email/password uses 'full_name'
+          // ✅ KEY FIX: Set user IMMEDIATELY from session data — no DB round-trip needed.
+          // This prevents the black screen when the DB profile is missing/slow.
+          setUser(sessionToUser(session))
+          setLoading(false)
+
+          // Then enhance with full DB profile in background (non-blocking)
           const meta = session.user.user_metadata || {}
-          const fallbackName = meta.full_name || meta.name || ''
-          const fallbackEmail = session.user.email || ''
-          const profile = await fetchOrCreateProfile(session.user.id, fallbackEmail, fallbackName)
-          if (profile) setUser(profile)
+          fetchOrCreateProfile(
+            session.user.id,
+            session.user.email || '',
+            meta.full_name || meta.name || '',
+          ).then(profile => {
+            if (profile) setUser(profile)
+          }).catch(() => {/* keep session-based user — DB unavailable */})
         }
       } catch {
-        // Auth unavailable — middleware handles redirect
+        // Auth unavailable — leave user null
       } finally {
         setLoading(false)
       }
@@ -87,7 +111,7 @@ export function useAuth() {
 
     bootstrap()
 
-    // Listen for auth events — critical for OAuth redirects
+    // Subscribe to auth state changes (critical for OAuth redirects)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
@@ -96,26 +120,22 @@ export function useAuth() {
           return
         }
 
-        // INITIAL_SESSION: fires on page load if session exists
-        // SIGNED_IN: fires after OAuth callback code exchange completes
-        // TOKEN_REFRESHED: fires when token auto-renews
         if (
           (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
           session?.user
         ) {
-          try {
-            const meta = session.user.user_metadata || {}
-            const fallbackName = meta.full_name || meta.name || ''
-            const fallbackEmail = session.user.email || ''
-            const profile = await fetchOrCreateProfile(session.user.id, fallbackEmail, fallbackName)
-            if (profile) {
-              setUser(profile)
-            }
-          } catch {
-            // Profile fetch failed but session is valid
-          } finally {
-            setLoading(false)
-          }
+          // ✅ Set immediately from session, then enhance from DB
+          setUser(sessionToUser(session))
+          setLoading(false)
+
+          const meta = session.user.user_metadata || {}
+          fetchOrCreateProfile(
+            session.user.id,
+            session.user.email || '',
+            meta.full_name || meta.name || '',
+          ).then(profile => {
+            if (profile) setUser(profile)
+          }).catch(() => {})
           return
         }
 

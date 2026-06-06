@@ -6,57 +6,84 @@ import { useAuth } from '@/hooks/useAuth'
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
 
-function LoadingSkeleton({ message }: { message: string }) {
+function LoadingSkeleton({ message = 'Loading…' }: { message?: string }) {
   return (
-    <div className="flex h-screen w-full bg-slate-50 items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 animate-pulse" />
-        <div className="space-y-2 text-center">
-          <div className="w-32 h-3 bg-slate-200 rounded animate-pulse mx-auto" />
-          <div className="w-20 h-2 bg-slate-100 rounded animate-pulse mx-auto" />
+    <div style={{
+      display: 'flex', height: '100vh', width: '100%',
+      background: 'var(--bg-base)',
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+        {/* Amber logo mark */}
+        <div style={{
+          width: '44px', height: '44px', borderRadius: '12px',
+          background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+          boxShadow: '0 0 24px rgba(245,158,11,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0A0D14" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+          </svg>
         </div>
-        <p className="text-xs text-slate-400 font-medium">{message}</p>
+        {/* Skeleton lines */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+          <div className="skeleton" style={{ width: '120px', height: '10px' }} />
+          <div className="skeleton" style={{ width: '80px', height: '8px', opacity: 0.6 }} />
+        </div>
+        <p style={{
+          fontFamily: 'var(--font-body)', fontSize: '12px',
+          color: 'var(--text-muted)', fontWeight: 500,
+          letterSpacing: '0.02em',
+        }}>{message}</p>
       </div>
     </div>
   )
 }
 
-// Inner component uses useSearchParams — must be inside Suspense
 function DashboardGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const isOAuthRedirect = searchParams.get('from') === 'oauth'
 
+  // Short grace period for OAuth — user is now set immediately from session
+  // so 1.5s is more than enough (vs the old 3s)
   const [oauthGrace, setOauthGrace] = useState(isOAuthRedirect)
 
   useEffect(() => {
     if (!isOAuthRedirect) return
-    const timer = setTimeout(() => setOauthGrace(false), 3000)
+    const timer = setTimeout(() => setOauthGrace(false), 1500)
     return () => clearTimeout(timer)
   }, [isOAuthRedirect])
 
+  // Stop grace period as soon as user is confirmed
   useEffect(() => {
     if (user) setOauthGrace(false)
   }, [user])
 
+  // Redirect to login only after loading/grace period is done and user is null
   useEffect(() => {
     if (loading || oauthGrace) return
     if (!user) router.replace('/login')
   }, [user, loading, oauthGrace, router])
 
   if (loading || oauthGrace) {
-    return <LoadingSkeleton message={oauthGrace ? 'Completing sign-in...' : 'Loading...'} />
+    return <LoadingSkeleton message={oauthGrace ? 'Completing sign-in…' : 'Loading…'} />
   }
 
   if (!user) return null
 
   return (
-    <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans">
+    <div style={{
+      display: 'flex', height: '100vh', width: '100%',
+      background: 'var(--bg-base)', overflow: 'hidden',
+      fontFamily: 'var(--font-body)',
+    }}>
       <Sidebar />
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
         <Topbar />
-        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <main style={{ flex: 1, overflowY: 'auto', padding: '32px' }} className="custom-scrollbar">
           {children}
         </main>
       </div>
@@ -68,7 +95,7 @@ export default function DashboardLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <Suspense fallback={<LoadingSkeleton message="Loading..." />}>
+    <Suspense fallback={<LoadingSkeleton />}>
       <DashboardGuard>{children}</DashboardGuard>
     </Suspense>
   )
