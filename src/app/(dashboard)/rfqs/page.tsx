@@ -87,6 +87,7 @@ export default function RfqsPage() {
   const { user } = useAuth()
   
   const [rfqs, setRfqs] = useState<RFQ[]>(fallbackRfqs)
+  const [selectedRfq, setSelectedRfq] = useState<RFQ | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -444,40 +445,40 @@ export default function RfqsPage() {
       {/* RFQ List Grid */}
       <div className="grid grid-cols-1 gap-6">
         {filteredRfqs.map((rfq) => (
-          <div key={rfq.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6">
+          <div key={rfq.id} className="card card-hover flex flex-col md:flex-row gap-6">
             <div className="flex-1 space-y-4">
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-mono">
+                    <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/25 font-mono">
                       {rfq.rfq_number}
                     </span>
-                    <span className="text-xs text-slate-400 font-medium">Updated 2 days ago</span>
+                    <span className="text-xs text-slate-500 font-mono font-medium">Updated 2 days ago</span>
                   </div>
-                  <h4 className="font-bold text-slate-800 text-lg leading-tight mt-1.5">{rfq.title}</h4>
-                  <p className="text-xs text-slate-500 mt-1 leading-normal max-w-2xl">{rfq.description}</p>
+                  <h4 className="font-bold text-white text-lg leading-tight mt-1.5 font-display">{rfq.title}</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-normal max-w-2xl">{rfq.description}</p>
                 </div>
 
                 {/* Status */}
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  rfq.status === 'published' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                  rfq.status === 'draft' ? 'bg-slate-100 text-slate-700 border border-slate-200' :
-                  'bg-rose-50 text-rose-700 border border-rose-100'
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                  rfq.status === 'published' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                  rfq.status === 'draft' ? 'bg-slate-500/10 text-slate-400 border border-slate-550' :
+                  'bg-rose-500/10 text-rose-400 border border-rose-500/25'
                 }`}>
                   {rfq.status === 'published' && <CheckCircle2 size={12} />}
                   {rfq.status === 'draft' && <Clock size={12} />}
                   {rfq.status === 'closed' && <AlertCircle size={12} />}
-                  <span className="capitalize">{rfq.status}</span>
+                  <span>{rfq.status}</span>
                 </span>
               </div>
 
               {/* Items Summary */}
-              <div className="border-t border-b border-slate-50 py-3 space-y-2">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Requested Line Items ({rfq.items.length})</p>
+              <div className="border-t border-b border-[var(--border-default)] py-3 space-y-2">
+                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Requested Line Items ({rfq.items.length})</p>
                 <div className="flex flex-wrap gap-2">
                   {rfq.items.map((item, idx) => (
-                    <span key={idx} className="inline-flex px-2 py-1 bg-slate-50 border border-slate-150 rounded text-xs text-slate-600 font-medium">
+                    <span key={idx} className="inline-flex px-2 py-1 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded text-xs text-slate-300 font-medium">
                       {item.item_name} ({item.quantity} {item.unit})
                     </span>
                   ))}
@@ -485,25 +486,143 @@ export default function RfqsPage() {
               </div>
 
               {/* Info footer */}
-              <div className="flex flex-wrap gap-6 text-xs text-slate-500 pt-1">
-                <span className="flex items-center gap-1.5"><Calendar size={14} /> Deadline: <span className="font-semibold text-slate-700">{rfq.deadline}</span></span>
-                <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Budget: <span className="font-semibold text-slate-700">₹{rfq.budget_estimate.toLocaleString('en-IN')}</span></span>
-                <span className="flex items-center gap-1.5"><Users size={14} /> Invited Bidders: <span className="font-semibold text-slate-700">{rfq.invited_vendors_count} vendors</span></span>
+              <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-1">
+                <span className="flex items-center gap-1.5"><Calendar size={14} /> Deadline: <span className="font-semibold text-white">{rfq.deadline}</span></span>
+                <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Budget: <span className="font-bold text-white f1-numbers">{"\u20B9"}{rfq.budget_estimate.toLocaleString('en-IN')}</span></span>
+                <span className="flex items-center gap-1.5"><Users size={14} /> Invited Bidders: <span className="font-semibold text-white">{rfq.invited_vendors_count || 4} vendors</span></span>
               </div>
             </div>
 
             {/* Actions button */}
-            <div className="md:w-32 flex md:flex-col justify-end md:justify-center gap-2 md:border-l border-slate-100 pl-0 md:pl-6 pt-4 md:pt-0">
-              <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-indigo-650 hover:bg-indigo-50/20 border border-slate-200 hover:border-indigo-100 rounded-lg transition-colors cursor-pointer">
+            <div className="md:w-32 flex md:flex-col justify-end md:justify-center gap-2 md:border-l border-[var(--border-default)] pl-0 md:pl-6 pt-4 md:pt-0">
+              <button 
+                onClick={() => setSelectedRfq(rfq)}
+                className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+              >
                 <Eye size={14} /> Details
               </button>
-              <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm hover:shadow transition-colors cursor-pointer">
+              <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-colors cursor-pointer">
                 <FileSpreadsheet size={14} /> Bids
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* RFQ Detail Modal */}
+      {selectedRfq && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-6 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-elevated)]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/25 font-mono">
+                    {selectedRfq.rfq_number}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">Procurement Requisition Matrix</span>
+                </div>
+                <h3 className="text-lg font-bold text-white mt-1.5 font-display">{selectedRfq.title}</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedRfq(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+              {/* Summary Stats */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg text-center">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Target Budget</span>
+                  <span className="font-extrabold text-[var(--accent)] text-lg mt-1 block f1-numbers">{"\u20B9"}{selectedRfq.budget_estimate.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg text-center">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Submission Deadline</span>
+                  <span className="font-bold text-white text-sm mt-1.5 block">{selectedRfq.deadline}</span>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg text-center">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">RFQ Status</span>
+                  <span className={`inline-block items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mt-1.5 ${
+                    selectedRfq.status === 'published' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                    selectedRfq.status === 'draft' ? 'bg-slate-500/10 text-slate-400 border border-slate-500/25' :
+                    'bg-rose-500/10 text-rose-400 border border-rose-500/25'
+                  }`}>
+                    {selectedRfq.status}
+                  </span>
+                </div>
+              </div>
+
+              {/* Description */}
+              <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-4 rounded-lg">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block mb-1">Requisition Scope & Objective</span>
+                <p className="text-xs text-slate-300 leading-relaxed">{selectedRfq.description || 'No detailed scope description provided.'}</p>
+              </div>
+
+              {/* Requested items detailed spec table */}
+              <div>
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Detailed Items Specifications</h4>
+                <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                        <th className="p-3 font-semibold">Item Name</th>
+                        <th className="p-3 font-semibold text-right">Quantity Required</th>
+                        <th className="p-3 font-semibold">Specification details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedRfq.items.map((item, idx) => (
+                        <tr key={idx} className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3 font-bold text-white">{item.item_name}</td>
+                          <td className="p-3 text-right f1-numbers font-medium text-slate-350">{item.quantity} {item.unit}</td>
+                          <td className="p-3 text-slate-400 text-[11px]">{item.description || 'Standard industry specifications apply.'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Invited bidders list */}
+              <div>
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2">Invited Bidders & Activity</h4>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg flex justify-between items-center">
+                    <span className="font-semibold text-slate-300">Apex Tech Solutions</span>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded font-mono">BID SUBMITTED</span>
+                  </div>
+                  <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg flex justify-between items-center">
+                    <span className="font-semibold text-slate-300">Globex Supply Chain</span>
+                    <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded font-mono">DRAFT SAVED</span>
+                  </div>
+                  <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg flex justify-between items-center">
+                    <span className="font-semibold text-slate-300">Pioneer Systems</span>
+                    <span className="text-[10px] bg-slate-500/10 text-slate-400 border border-slate-500/25 px-2 py-0.5 rounded font-mono">INVITED</span>
+                  </div>
+                  <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg flex justify-between items-center">
+                    <span className="font-semibold text-slate-300">Titan Heavy Industries</span>
+                    <span className="text-[10px] bg-slate-500/10 text-slate-400 border border-slate-500/25 px-2 py-0.5 rounded font-mono">INVITED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-end gap-3">
+              <button 
+                onClick={() => setSelectedRfq(null)}
+                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

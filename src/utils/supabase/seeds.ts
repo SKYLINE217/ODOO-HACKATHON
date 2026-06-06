@@ -32,6 +32,49 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       department: 'Sales',
       avatar_url: null,
       vendor_id: 'vid-apex'
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000005',
+      full_name: 'Priyanka Sharma',
+      email: 'priya@swiftlogistics.co.in',
+      role: 'vendor',
+      department: 'Logistics Operations',
+      avatar_url: null,
+      vendor_id: 'vid-swift'
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000006',
+      full_name: 'Robert D',
+      email: 'robert@superior.com',
+      role: 'vendor',
+      department: 'Accounts & Sales',
+      avatar_url: null,
+      vendor_id: 'vid-supe'
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000007',
+      full_name: 'Elena Rostova (Finance)',
+      email: 'elena@vendorbridge.io',
+      role: 'manager',
+      department: 'Finance & Accounts',
+      avatar_url: null
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000008',
+      full_name: 'Vikram Malhotra',
+      email: 'vikram@vendorbridge.io',
+      role: 'procurement_officer',
+      department: 'Global Sourcing',
+      avatar_url: null
+    },
+    {
+      id: '00000000-0000-0000-0000-000000000009',
+      full_name: 'Zenith Sales Rep',
+      email: 'sales@zenithsystems.com',
+      role: 'vendor',
+      department: 'Sales',
+      avatar_url: null,
+      vendor_id: 'vid-zenith'
     }
   ],
   vendor_categories: [
@@ -91,6 +134,54 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       total_orders: 31,
       created_by: '00000000-0000-0000-0000-000000000003',
       notes: 'Premium ergonomic seating.'
+    },
+    {
+      id: 'vid-zenith',
+      company_name: 'Zenith Systems Corp',
+      category_id: 'cat-it',
+      contact_person: 'Zenith Sales Rep',
+      email: 'sales@zenithsystems.com',
+      phone: '+91 11 4050 6070',
+      city: 'Delhi',
+      state: 'NCR',
+      gst_number: '07AAACZ1122D1Z9',
+      status: 'active',
+      rating: 4.5,
+      total_orders: 45,
+      created_by: '00000000-0000-0000-0000-000000000008',
+      notes: 'Enterprise networking & cloud hardware.'
+    },
+    {
+      id: 'vid-delta',
+      company_name: 'Delta Digital Ltd',
+      category_id: 'cat-it',
+      contact_person: 'Ananya Goel',
+      email: 'ananya@deltadigital.in',
+      phone: '+91 40 5588 9900',
+      city: 'Hyderabad',
+      state: 'Telangana',
+      gst_number: '36AABBD4455E2Z8',
+      status: 'active',
+      rating: 4.1,
+      total_orders: 18,
+      created_by: '00000000-0000-0000-0000-000000000003',
+      notes: 'Hardware & system integrations.'
+    },
+    {
+      id: 'vid-core',
+      company_name: 'Core Steel Industries',
+      category_id: 'cat-raw',
+      contact_person: 'Baldev Singh',
+      email: 'baldev@coresteel.com',
+      phone: '+91 33 2288 3344',
+      city: 'Kolkata',
+      state: 'West Bengal',
+      gst_number: '19AAACC5566F1Z7',
+      status: 'active',
+      rating: 4.7,
+      total_orders: 62,
+      created_by: '00000000-0000-0000-0000-000000000001',
+      notes: 'High-grade structural steel manufacturer.'
     }
   ],
   rfqs: [
@@ -115,6 +206,40 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       budget_estimate: 1800000,
       created_by: '00000000-0000-0000-0000-000000000003',
       published_at: new Date(Date.now() - 5 * 86400000).toISOString()
+    },
+    {
+      id: 'rfq3',
+      rfq_number: 'RFQ-2026-00044',
+      title: 'Network Switch Rollout',
+      description: 'L3 switches for corporate network deployment.',
+      status: 'published',
+      deadline: new Date(Date.now() + 12 * 86400000).toISOString(),
+      budget_estimate: 1200000,
+      created_by: '00000000-0000-0000-0000-000000000008',
+      published_at: new Date(Date.now() - 1 * 86400000).toISOString()
+    },
+    {
+      id: 'rfq4',
+      rfq_number: 'RFQ-2026-00045',
+      title: 'Structural Steel Supply',
+      description: '12mm Steel plates and reinforcement bars for Warehouse Extension.',
+      status: 'closed',
+      deadline: new Date(Date.now() - 3 * 86400000).toISOString(),
+      budget_estimate: 5000000,
+      created_by: '00000000-0000-0000-0000-000000000003',
+      published_at: new Date(Date.now() - 15 * 86400000).toISOString(),
+      closed_at: new Date(Date.now() - 3 * 86400000).toISOString()
+    },
+    {
+      id: 'rfq5',
+      rfq_number: 'RFQ-2026-00046',
+      title: 'Annual Cyber Audit 2026',
+      description: 'External VAPT, compliance review, and security risk advisory.',
+      status: 'published',
+      deadline: new Date(Date.now() + 25 * 86400000).toISOString(),
+      budget_estimate: 800000,
+      created_by: '00000000-0000-0000-0000-000000000008',
+      published_at: new Date(Date.now() - 4 * 86400000).toISOString()
     }
   ],
   rfq_items: [
@@ -134,6 +259,51 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       quantity: 80,
       uom: 'Units',
       description: 'High back, lumbar support',
+      sort_order: 1
+    },
+    {
+      id: 'rfq-item3',
+      rfq_id: 'rfq2',
+      item_name: 'Standing Desk',
+      quantity: 10,
+      uom: 'Units',
+      description: 'Dual motor, memory preset',
+      sort_order: 2
+    },
+    {
+      id: 'rfq-item4',
+      rfq_id: 'rfq3',
+      item_name: 'L3 Core Switch 48-Port',
+      quantity: 6,
+      uom: 'Units',
+      description: 'PoE+ enabled, 10G SFP+ uplinks',
+      sort_order: 1
+    },
+    {
+      id: 'rfq-item5',
+      rfq_id: 'rfq4',
+      item_name: 'Steel Plate 12mm',
+      quantity: 45,
+      uom: 'Tons',
+      description: 'Grade Fe500 structural steel',
+      sort_order: 1
+    },
+    {
+      id: 'rfq-item6',
+      rfq_id: 'rfq4',
+      item_name: 'Reinforcement Bars (16mm)',
+      quantity: 100,
+      uom: 'Units',
+      description: 'Corrosion resistant steel bars',
+      sort_order: 2
+    },
+    {
+      id: 'rfq-item7',
+      rfq_id: 'rfq5',
+      item_name: 'Cybersecurity Penetration Test',
+      quantity: 1,
+      uom: 'Service',
+      description: 'Blackbox/Whitebox VAPT audit of ERP & Core Network',
       sort_order: 1
     }
   ],
@@ -171,6 +341,91 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       igst_amount: 0,
       total_amount: 1829000,
       created_by: '00000000-0000-0000-0000-000000000003'
+    },
+    {
+      id: 'quo3',
+      quotation_number: 'QUO-2026-00019',
+      rfq_id: 'rfq1',
+      vendor_id: 'vid-zenith',
+      status: 'under_review',
+      validity_days: 45,
+      subtotal: 2680000,
+      cgst_rate: 9,
+      cgst_amount: 241200,
+      sgst_rate: 9,
+      sgst_amount: 241200,
+      igst_rate: 0,
+      igst_amount: 0,
+      total_amount: 3162400,
+      created_by: '00000000-0000-0000-0000-000000000009'
+    },
+    {
+      id: 'quo4',
+      quotation_number: 'QUO-2026-00020',
+      rfq_id: 'rfq1',
+      vendor_id: 'vid-delta',
+      status: 'rejected',
+      validity_days: 15,
+      subtotal: 2850000,
+      cgst_rate: 9,
+      cgst_amount: 256500,
+      sgst_rate: 9,
+      sgst_amount: 256500,
+      igst_rate: 0,
+      igst_amount: 0,
+      total_amount: 3363000,
+      created_by: '00000000-0000-0000-0000-000000000003'
+    },
+    {
+      id: 'quo5',
+      quotation_number: 'QUO-2026-00021',
+      rfq_id: 'rfq3',
+      vendor_id: 'vid-zenith',
+      status: 'pending',
+      validity_days: 30,
+      subtotal: 980000,
+      cgst_rate: 9,
+      cgst_amount: 88200,
+      sgst_rate: 9,
+      sgst_amount: 88200,
+      igst_rate: 0,
+      igst_amount: 0,
+      total_amount: 1156400,
+      created_by: '00000000-0000-0000-0000-000000000009'
+    },
+    {
+      id: 'quo6',
+      quotation_number: 'QUO-2026-00022',
+      rfq_id: 'rfq4',
+      vendor_id: 'vid-core',
+      status: 'awarded',
+      validity_days: 60,
+      subtotal: 4100000,
+      cgst_rate: 0,
+      cgst_amount: 0,
+      sgst_rate: 0,
+      sgst_amount: 0,
+      igst_rate: 18,
+      igst_amount: 738000,
+      total_amount: 4838000,
+      created_by: '00000000-0000-0000-0000-000000000008'
+    },
+    {
+      id: 'quo7',
+      quotation_number: 'QUO-2026-00023',
+      rfq_id: 'rfq5',
+      vendor_id: 'vid-apex',
+      status: 'pending',
+      validity_days: 30,
+      subtotal: 720000,
+      cgst_rate: 9,
+      cgst_amount: 64800,
+      sgst_rate: 9,
+      sgst_amount: 64800,
+      igst_rate: 0,
+      igst_amount: 0,
+      total_amount: 849600,
+      created_by: '00000000-0000-0000-0000-000000000004'
     }
   ],
   approvals: [
@@ -193,6 +448,26 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       actioned_by: null,
       requested_at: new Date(Date.now() - 1 * 86400000).toISOString(),
       actioned_at: null
+    },
+    {
+      id: 'app3',
+      quotation_id: 'quo5',
+      status: 'pending',
+      remarks: 'Awaiting L1 technical evaluation check.',
+      requested_by: '00000000-0000-0000-0000-000000000008',
+      actioned_by: null,
+      requested_at: new Date().toISOString(),
+      actioned_at: null
+    },
+    {
+      id: 'app4',
+      quotation_id: 'quo6',
+      status: 'approved',
+      remarks: 'Bulk pricing discount approved by director.',
+      requested_by: '00000000-0000-0000-0000-000000000008',
+      actioned_by: '00000000-0000-0000-0000-000000000001',
+      requested_at: new Date(Date.now() - 4 * 86400000).toISOString(),
+      actioned_at: new Date(Date.now() - 3 * 86400000).toISOString()
     }
   ],
   purchase_orders: [
@@ -206,7 +481,21 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       tax_amount: 495000,
       total_amount: 3245000,
       delivery_date: new Date(Date.now() + 18 * 86400000).toISOString().split('T')[0],
-      created_by: '00000000-0000-0000-0000-000000000003'
+      created_by: '00000000-0000-0000-0000-000000000003',
+      issued_at: new Date(Date.now() - 1 * 86400000).toISOString().split('T')[0]
+    },
+    {
+      id: 'po2',
+      po_number: 'PO-2026-00008',
+      quotation_id: 'quo6',
+      vendor_id: 'vid-core',
+      status: 'fulfilled',
+      subtotal: 4100000,
+      tax_amount: 738000,
+      total_amount: 4838000,
+      delivery_date: new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0],
+      created_by: '00000000-0000-0000-0000-000000000008',
+      issued_at: new Date(Date.now() - 12 * 86400000).toISOString().split('T')[0]
     }
   ],
   invoices: [
@@ -224,6 +513,22 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       total_amount: 3245000,
       due_date: new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
       created_by: '00000000-0000-0000-0000-000000000004'
+    },
+    {
+      id: 'inv2',
+      invoice_number: 'INV-2026-00011',
+      po_id: 'po2',
+      vendor_id: 'vid-core',
+      status: 'paid',
+      subtotal: 4100000,
+      cgst_amount: 0,
+      sgst_amount: 0,
+      igst_amount: 738000,
+      total_tax: 738000,
+      total_amount: 4838000,
+      due_date: new Date(Date.now() - 5 * 86400000).toISOString().split('T')[0],
+      paid_at: new Date(Date.now() - 6 * 86400000).toISOString().split('T')[0],
+      created_by: '00000000-0000-0000-0000-000000000008'
     }
   ],
   activity_logs: [
@@ -241,7 +546,7 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       entity_type: 'quotation',
       entity_id: 'quo1',
       action: 'SUBMIT',
-      description: 'Quotation received from Apex Technology',
+      description: 'Quotation received from Apex Technology Solutions',
       performed_by: '00000000-0000-0000-0000-000000000004',
       performed_at: new Date(Date.now() - 3 * 86400000).toISOString()
     },
@@ -253,6 +558,24 @@ export const INITIAL_SEEDS: Record<string, any[]> = {
       description: 'Approved QUO-2026-00017.',
       performed_by: '00000000-0000-0000-0000-000000000002',
       performed_at: new Date(Date.now() - 2 * 86400000).toISOString()
+    },
+    {
+      id: 'act4',
+      entity_type: 'purchase_order',
+      entity_id: 'po1',
+      action: 'ISSUE',
+      description: 'Purchase Order PO-2026-00009 issued to Apex Tech Solutions',
+      performed_by: '00000000-0000-0000-0000-000000000003',
+      performed_at: new Date(Date.now() - 1 * 86400000).toISOString()
+    },
+    {
+      id: 'act5',
+      entity_type: 'rfq',
+      entity_id: 'rfq4',
+      action: 'AWARDED',
+      description: 'RFQ-2026-00045 structural steel supply contract awarded to Core Steel Industries',
+      performed_by: '00000000-0000-0000-0000-000000000008',
+      performed_at: new Date(Date.now() - 12 * 86400000).toISOString()
     }
   ],
   notifications: []

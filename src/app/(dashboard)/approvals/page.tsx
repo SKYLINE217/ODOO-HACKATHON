@@ -66,6 +66,7 @@ const supabase = createClient()
 
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([])
+  const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null)
   const [isDbMode, setIsDbMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
@@ -261,47 +262,219 @@ export default function ApprovalsPage() {
               </div>
 
               {/* Valuation and Quick Action buttons */}
-              <div className="md:w-56 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-4">
+              <div className="md:w-56 flex flex-col justify-center items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-3 w-full md:w-auto">
                 <div className="text-left md:text-center">
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Requisition Value</span>
                   <span className="font-extrabold text-white text-xl block mt-0.5 f1-numbers">{"\u20B9"}{req.amount.toLocaleString('en-IN')}</span>
                 </div>
 
-                {req.status === 'pending' ? (
-                  <div className="flex gap-2 w-full md:w-auto">
-                    <button
-                      onClick={() => handleAction(req.id, 'rejected')}
-                      disabled={actionLoadingId === req.id}
-                      className="flex-1 inline-flex items-center justify-center p-2 text-rose-400 hover:text-white hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-lg transition-all cursor-pointer"
-                      title="Reject Request"
-                    >
-                      {actionLoadingId === req.id ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <X size={16} />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => handleAction(req.id, 'approved')}
-                      disabled={actionLoadingId === req.id}
-                      className="flex-1 inline-flex items-center justify-center p-2 text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
-                      title="Approve Request"
-                    >
-                      {actionLoadingId === req.id ? (
-                        <Loader2 size={16} className="animate-spin" />
-                      ) : (
-                        <Check size={16} />
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer">
+                <div className="flex flex-col gap-2 w-full font-mono">
+                  <button 
+                    onClick={() => setSelectedApproval(req)}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+                  >
                     <Eye size={14} /> Review Details
                   </button>
-                )}
+
+                  {req.status === 'pending' && (
+                    <div className="flex gap-2 w-full">
+                      <button
+                        onClick={() => handleAction(req.id, 'rejected')}
+                        disabled={actionLoadingId === req.id}
+                        className="flex-1 inline-flex items-center justify-center p-1.5 text-rose-400 hover:text-white hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-lg transition-all cursor-pointer"
+                        title="Reject Request"
+                      >
+                        {actionLoadingId === req.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <X size={14} />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleAction(req.id, 'approved')}
+                        disabled={actionLoadingId === req.id}
+                        className="flex-1 inline-flex items-center justify-center p-1.5 text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
+                        title="Approve Request"
+                      >
+                        {actionLoadingId === req.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Check size={14} />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Review/Approval Detail Modal */}
+      {selectedApproval && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-6 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-elevated)]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize font-mono ${
+                    selectedApproval.entity_type === 'purchase_order' ? 'bg-indigo-500/10 border-indigo-500/25 text-indigo-400' :
+                    selectedApproval.entity_type === 'invoice' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
+                    'bg-amber-500/10 border-amber-500/25 text-amber-400'
+                  }`}>
+                    {selectedApproval.entity_type.replace('_', ' ')}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">{selectedApproval.entity_number}</span>
+                </div>
+                <h3 className="text-lg font-bold text-white mt-1.5 font-display">Approval Verification Matrix</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedApproval(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+              {/* Info grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Requester Details</span>
+                  <h4 className="font-bold text-white text-sm mt-1">{selectedApproval.requester}</h4>
+                  <p className="text-xs text-slate-400 mt-1">Date Requested: {selectedApproval.date_requested}</p>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Verification Status</span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mt-1.5 ${
+                      selectedApproval.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                      selectedApproval.status === 'rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/25' :
+                      'bg-amber-500/10 text-amber-400 border border-amber-500/25'
+                    }`}>
+                      {selectedApproval.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Title & Remarks */}
+              <div className="space-y-2">
+                <h4 className="text-white font-bold text-sm">{selectedApproval.title}</h4>
+                {selectedApproval.remarks && (
+                  <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-3 rounded-lg text-xs leading-relaxed">
+                    <span className="text-slate-400 font-bold block mb-1">Requisitioner Justification Notes:</span>
+                    {selectedApproval.remarks}
+                  </div>
+                )}
+              </div>
+
+              {/* Line items breakdown */}
+              <div>
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Line Items Specifications</h4>
+                <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                        <th className="p-3 font-semibold">Specification</th>
+                        <th className="p-3 font-semibold text-right">Quantity</th>
+                        <th className="p-3 font-semibold text-right">Est. Unit Price</th>
+                        <th className="p-3 font-semibold text-right">Subtotal</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedApproval.entity_number.includes('PO-2026-00009') || selectedApproval.entity_number.includes('INV-2026-00012') ? (
+                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3">
+                            <p className="font-bold text-white">Rack Server 2U Upgrade</p>
+                            <span className="text-[10px] text-slate-400">Xeon Silver, 64GB RAM, 2TB SSD</span>
+                          </td>
+                          <td className="p-3 text-right">8 Units</td>
+                          <td className="p-3 text-right f1-numbers">{"\u20B9"}3,43,750</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}27,50,000</td>
+                        </tr>
+                      ) : selectedApproval.entity_number.includes('QUO-2026-00018') ? (
+                        <>
+                          <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                            <td className="p-3">
+                              <p className="font-bold text-white">Ergonomic Mesh Chair</p>
+                              <span className="text-[10px] text-slate-400">High back, lumbar support</span>
+                            </td>
+                            <td className="p-3 text-right">80 Chairs</td>
+                            <td className="p-3 text-right f1-numbers">{"\u20B9"}3,500</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}2,80,000</td>
+                          </tr>
+                          <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                            <td className="p-3">
+                              <p className="font-bold text-white">Standing Desk</p>
+                              <span className="text-[10px] text-slate-400">Dual motor, memory preset</span>
+                            </td>
+                            <td className="p-3 text-right">10 Units</td>
+                            <td className="p-3 text-right f1-numbers">{"\u20B9"}30,000</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}3,00,000</td>
+                          </tr>
+                        </>
+                      ) : (
+                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3">
+                            <p className="font-bold text-white">General Procurement Requisition Supplies</p>
+                            <span className="text-[10px] text-slate-400">Standard operational supplies matching procurement guidelines</span>
+                          </td>
+                          <td className="p-3 text-right">1 Lot</td>
+                          <td className="p-3 text-right f1-numbers">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Total Summary */}
+              <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex justify-between items-center text-xs">
+                <span className="text-white font-bold text-sm">Total Value to Approve</span>
+                <span className="font-extrabold text-[var(--accent)] text-lg f1-numbers">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</span>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-between gap-3 items-center">
+              <div>
+                <button 
+                  onClick={() => setSelectedApproval(null)}
+                  className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+
+              {selectedApproval.status === 'pending' && (
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => {
+                      handleAction(selectedApproval.id, 'rejected');
+                      setSelectedApproval(null);
+                    }}
+                    className="px-4 py-2 bg-rose-900/40 hover:bg-rose-900 border border-rose-500/30 rounded-lg text-xs font-semibold text-rose-300 hover:text-white transition-colors cursor-pointer"
+                  >
+                    Reject Requisition
+                  </button>
+                  <button 
+                    onClick={() => {
+                      handleAction(selectedApproval.id, 'approved');
+                      setSelectedApproval(null);
+                    }}
+                    className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg text-xs font-semibold text-white shadow-sm transition-colors cursor-pointer"
+                  >
+                    Approve & Sign PO
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -87,6 +87,7 @@ export default function VendorsPage() {
   const { user } = useAuth()
   
   const [vendors, setVendors] = useState<Vendor[]>(fallbackVendors)
+  const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
@@ -379,70 +380,207 @@ export default function VendorsPage() {
       {/* Vendors Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {filteredVendors.map((vendor) => (
-          <div key={vendor.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6 relative">
+          <div key={vendor.id} className="card card-hover flex flex-col md:flex-row gap-6 relative">
             <div className="flex-1 space-y-4">
               {/* Profile/Category Title */}
               <div className="flex items-start justify-between">
                 <div className="flex gap-3 items-center">
-                  <div className="p-2.5 bg-slate-50 border border-slate-100 rounded-lg text-slate-600">
+                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-slate-400">
                     <Building size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-slate-800 text-base leading-snug">{vendor.company_name}</h4>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200/50 mt-1">
+                    <h4 className="font-bold text-white text-base leading-snug font-display">{vendor.company_name}</h4>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-350 border border-slate-500/20 mt-1 font-mono">
                       {vendor.category}
                     </span>
                   </div>
                 </div>
                 {/* Status Badge */}
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                  vendor.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                  vendor.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                  'bg-rose-50 text-rose-700 border border-rose-100'
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                  vendor.status === 'active' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                  vendor.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25' :
+                  'bg-rose-500/10 text-rose-400 border border-rose-500/25'
                 }`}>
                   {vendor.status === 'active' && <CheckCircle size={12} />}
                   {vendor.status === 'pending' && <AlertTriangle size={12} />}
                   {(vendor.status === 'suspended' || vendor.status === 'blacklisted') && <XCircle size={12} />}
-                  <span className="capitalize">{vendor.status.replace('_', ' ')}</span>
+                  <span>{vendor.status}</span>
                 </span>
               </div>
 
               {/* Contact Info */}
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div className="space-y-2">
-                  <p className="text-slate-400 font-semibold uppercase tracking-wider">Contact</p>
-                  <p className="font-bold text-slate-700">{vendor.contact_person}</p>
+              <div className="grid grid-cols-2 gap-4 text-xs font-mono">
+                <div className="space-y-1">
+                  <p className="text-slate-500 font-semibold uppercase tracking-wider text-[9px]">Contact</p>
+                  <p className="font-bold text-slate-200">{vendor.contact_person}</p>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-slate-400 font-semibold uppercase tracking-wider">GSTIN</p>
-                  <code className="px-1.5 py-0.5 bg-slate-50 rounded text-slate-600 font-mono border border-slate-100">{vendor.gst_number}</code>
+                <div className="space-y-1">
+                  <p className="text-slate-500 font-semibold uppercase tracking-wider text-[9px]">GSTIN</p>
+                  <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-slate-300 border border-[var(--border-strong)]">{vendor.gst_number}</code>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-2 text-xs text-slate-500">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 text-xs text-slate-400 font-mono">
                 <span className="flex items-center gap-1.5"><Mail size={14} /> {vendor.email}</span>
-                <span className="hidden sm:inline text-slate-300">|</span>
+                <span className="hidden sm:inline text-slate-650">|</span>
                 <span className="flex items-center gap-1.5"><Phone size={14} /> {vendor.phone}</span>
               </div>
             </div>
 
             {/* Performance Stats column */}
-            <div className="md:w-36 flex flex-row md:flex-col justify-between md:justify-center items-center md:border-l border-slate-100 pl-0 md:pl-6 pt-4 md:pt-0 gap-4">
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Rating</p>
-                <div className="flex items-center gap-1 justify-center mt-1 text-amber-500 font-bold text-lg">
-                  <Star size={18} fill="currentColor" />
-                  <span>{vendor.rating > 0 ? vendor.rating.toFixed(1) : 'N/A'}</span>
+            <div className="md:w-36 flex flex-row md:flex-col justify-between md:justify-center items-center md:border-l border-[var(--border-default)] pl-0 md:pl-6 pt-4 md:pt-0 gap-4">
+              <div className="flex flex-row md:flex-col gap-4 w-full justify-around md:justify-center">
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Rating</p>
+                  <div className="flex items-center gap-1 justify-center mt-1 text-amber-400 font-bold text-base f1-numbers">
+                    <Star size={14} fill="currentColor" />
+                    <span>{vendor.rating > 0 ? vendor.rating.toFixed(1) : 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Orders</p>
+                  <span className="text-white font-extrabold text-base block mt-0.5 f1-numbers">{vendor.total_orders}</span>
                 </div>
               </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Orders</p>
-                <span className="text-slate-700 font-extrabold text-lg block mt-0.5">{vendor.total_orders}</span>
-              </div>
+              <button 
+                onClick={() => setSelectedVendor(vendor)}
+                className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+              >
+                View Profile
+              </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* Vendor Profile Modal */}
+      {selectedVendor && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-6 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-elevated)]">
+              <div className="flex gap-3 items-center">
+                <div className="p-3 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-[var(--accent)]">
+                  <Building size={28} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-300 bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-default)] font-mono">
+                      ID: {selectedVendor.id}
+                    </span>
+                    <span className="text-xs text-slate-400 font-mono font-medium">{selectedVendor.category}</span>
+                  </div>
+                  <h3 className="text-lg font-bold text-white mt-1 font-display">{selectedVendor.company_name}</h3>
+                </div>
+              </div>
+              <button 
+                onClick={() => setSelectedVendor(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+              {/* Profile stats & reliability */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Rating Score</span>
+                  <div className="flex items-center gap-1 justify-center mt-1 text-amber-400 font-bold text-base f1-numbers">
+                    <Star size={14} fill="currentColor" />
+                    <span>{selectedVendor.rating > 0 ? selectedVendor.rating.toFixed(1) : 'N/A'}</span>
+                  </div>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Completed Orders</span>
+                  <span className="font-extrabold text-white text-base block mt-1 f1-numbers">{selectedVendor.total_orders}</span>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Fulfillment Rate</span>
+                  <span className="font-bold text-emerald-400 text-sm mt-1.5 block font-mono">98.6%</span>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
+                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Avg. Response Time</span>
+                  <span className="font-bold text-indigo-400 text-sm mt-1.5 block font-mono">1.2 Days</span>
+                </div>
+              </div>
+
+              {/* Contact Information block */}
+              <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-4 rounded-lg space-y-3">
+                <h4 className="text-white font-bold text-xs uppercase tracking-wider border-b border-[var(--border-default)] pb-2 mb-2">Corporate Information</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                  <div>
+                    <span className="text-slate-500 block font-semibold">Primary Representative:</span>
+                    <span className="text-slate-200 font-medium block mt-0.5">{selectedVendor.contact_person}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block font-semibold">GSTIN / Registration:</span>
+                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.gst_number}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block font-semibold">Business Email:</span>
+                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block font-semibold">Corporate Phone:</span>
+                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.phone}</span>
+                  </div>
+                </div>
+                <div className="pt-2 text-xs border-t border-[var(--border-default)]">
+                  <span className="text-slate-500 block font-semibold">Registered Headquarters Office:</span>
+                  <p className="text-slate-350 mt-1">104, Tech Park Boulevard, Sector 4, Bangalore, Karnataka, 560001</p>
+                </div>
+              </div>
+
+              {/* Recent Bids and Activity */}
+              <div>
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Associated Procurements & Active Bids</h4>
+                <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                        <th className="p-3 font-semibold">Requisition Ref</th>
+                        <th className="p-3 font-semibold">Title</th>
+                        <th className="p-3 font-semibold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                        <td className="p-3 font-mono text-indigo-400">RFQ-2026-00042</td>
+                        <td className="p-3 text-slate-300">Server Hardware Upgrade</td>
+                        <td className="p-3">
+                          <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded font-mono">SUBMITTED</span>
+                        </td>
+                      </tr>
+                      <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                        <td className="p-3 font-mono text-indigo-400">RFQ-2026-00043</td>
+                        <td className="p-3 text-slate-300">Office Ergonomic Chairs</td>
+                        <td className="p-3">
+                          <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded font-mono">DRAFT BID</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-between gap-3 items-center">
+              <span className="text-[10px] text-slate-500 font-mono">
+                Verified Vendor Partner since 2024
+              </span>
+              <button 
+                onClick={() => setSelectedVendor(null)}
+                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+              >
+                Close Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

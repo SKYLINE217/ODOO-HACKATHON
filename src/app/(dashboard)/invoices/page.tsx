@@ -73,6 +73,7 @@ export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null)
   
   const [isDbMode, setIsDbMode] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -328,32 +329,181 @@ export default function InvoicesPage() {
               </div>
 
               {/* Valuation and Mark paid */}
-              <div className="md:w-48 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-4">
+              <div className="md:w-48 flex flex-col justify-center items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-3 w-full md:w-auto">
                 <div className="text-left md:text-center">
                   <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Invoice Total</span>
                   <span className="font-extrabold text-white text-xl block mt-0.5 f1-numbers">{"\u20B9"}{inv.total_amount.toLocaleString('en-IN')}</span>
                 </div>
 
-                {inv.status === 'sent' ? (
-                  <button
-                    onClick={() => handleMarkAsPaid(inv.id)}
-                    disabled={actionLoadingId === inv.id}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
+                <div className="flex flex-col gap-2 w-full">
+                  <button 
+                    onClick={() => setSelectedInvoice(inv)}
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
                   >
-                    {actionLoadingId === inv.id ? (
-                      <Loader2 size={12} className="animate-spin" />
-                    ) : (
-                      'Mark Paid'
-                    )}
-                  </button>
-                ) : (
-                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer">
                     <Eye size={14} /> View Details
                   </button>
-                )}
+
+                  {inv.status === 'sent' && (
+                    <button
+                      onClick={() => handleMarkAsPaid(inv.id)}
+                      disabled={actionLoadingId === inv.id}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
+                    >
+                      {actionLoadingId === inv.id ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        'Mark Paid'
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Invoice Detail Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-6 border-b border-[var(--border-default)] flex justify-between items-center bg-[var(--bg-elevated)]">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold text-slate-300 bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-default)] font-mono">
+                    {selectedInvoice.invoice_number}
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">PO Ref: {selectedInvoice.po_ref}</span>
+                </div>
+                <h3 className="text-lg font-bold text-white mt-1.5 font-display">Invoice Details</h3>
+              </div>
+              <button 
+                onClick={() => setSelectedInvoice(null)}
+                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Vendor Details</span>
+                  <h4 className="font-bold text-white text-base mt-1">{selectedInvoice.vendor_name}</h4>
+                  <p className="text-xs text-slate-400 mt-1">IFSC: HDFC0000124 | A/C: ••••••••••••5024</p>
+                  <p className="text-xs text-slate-400">GSTIN: 27AABCA1234A1Z5</p>
+                </div>
+                <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex flex-col justify-between">
+                  <div>
+                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Billing Status</span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mt-1.5 ${
+                      selectedInvoice.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                      selectedInvoice.status === 'sent' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/25' :
+                      'bg-rose-500/10 text-rose-400 border border-rose-500/25'
+                    }`}>
+                      {selectedInvoice.status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400 mt-2">
+                    <p>Due Date: {selectedInvoice.due_date}</p>
+                    {selectedInvoice.paid_at && <p className="text-emerald-400">Paid On: {selectedInvoice.paid_at}</p>}
+                  </div>
+                </div>
+              </div>
+
+              {/* Items list */}
+              <div>
+                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Invoiced Line Items</h4>
+                <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                        <th className="p-3 font-semibold">Item & Details</th>
+                        <th className="p-3 font-semibold text-right">Quantity</th>
+                        <th className="p-3 font-semibold text-right">Unit Price</th>
+                        <th className="p-3 font-semibold text-right">Total Price</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedInvoice.invoice_number.includes('00012') ? (
+                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3">
+                            <p className="font-bold text-white">Rack Server 2U</p>
+                            <span className="text-[10px] text-slate-400">Xeon Silver, 64GB RAM, 2TB SSD</span>
+                          </td>
+                          <td className="p-3 text-right">8 Units</td>
+                          <td className="p-3 text-right f1-numbers">{"\u20B9"}3,43,750</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}27,50,000</td>
+                        </tr>
+                      ) : selectedInvoice.invoice_number.includes('00010') ? (
+                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3">
+                            <p className="font-bold text-white">Ergonomic Mesh Chair</p>
+                            <span className="text-[10px] text-slate-400">High back, lumbar support</span>
+                          </td>
+                          <td className="p-3 text-right">80 Units</td>
+                          <td className="p-3 text-right f1-numbers">{"\u20B9"}3,500</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}2,80,000</td>
+                        </tr>
+                      ) : (
+                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <td className="p-3">
+                            <p className="font-bold text-white">Steel Plate 12mm & Reinforcement Bars</p>
+                            <span className="text-[10px] text-slate-400">Grade Fe500 structural steel construction supplies</span>
+                          </td>
+                          <td className="p-3 text-right">Bulk Lot</td>
+                          <td className="p-3 text-right f1-numbers">{"\u20B9"}{selectedInvoice.subtotal.toLocaleString('en-IN')}</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}{selectedInvoice.subtotal.toLocaleString('en-IN')}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Tax Splits */}
+              <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg space-y-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">Subtotal</span>
+                  <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedInvoice.subtotal.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">CGST (9%)</span>
+                  <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedInvoice.cgst_amount.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-medium">SGST (9%)</span>
+                  <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedInvoice.sgst_amount.toLocaleString('en-IN')}</span>
+                </div>
+                {selectedInvoice.igst_amount > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400 font-medium">IGST (18%)</span>
+                    <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedInvoice.igst_amount.toLocaleString('en-IN')}</span>
+                  </div>
+                )}
+                <div className="h-px bg-[var(--border-default)] my-1.5" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-white font-bold">Total Invoiced Amount</span>
+                  <span className="font-extrabold text-[var(--accent)] f1-numbers">{"\u20B9"}{selectedInvoice.total_amount.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-between gap-3 items-center">
+              <span className="text-[10px] text-slate-500 font-mono">
+                {selectedInvoice.status === 'paid' ? 'TXN-8761254921 Verified' : 'Awaiting Settlement'}
+              </span>
+              <button 
+                onClick={() => setSelectedInvoice(null)}
+                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+              >
+                Close Details
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -146,64 +146,64 @@ export default function ActivityLogPage() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Audit & Activity Logs</h2>
-        <p className="text-slate-500 text-sm mt-1">Full audit trail tracking entity state alterations, creator details, and timestamps.</p>
+        <h2 className="text-2xl font-bold text-white tracking-tight font-display">Audit & Activity Logs</h2>
+        <p className="text-slate-400 text-sm mt-1">Full audit trail tracking entity state alterations, creator details, and timestamps.</p>
       </div>
 
       {/* Search Bar */}
       <div className="relative w-full max-w-md group">
         <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+          <Search size={18} className="text-slate-450 group-focus-within:text-[var(--accent)] transition-colors" />
         </span>
         <input
           type="text"
           placeholder="Filter audit logs..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-sm"
+          className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:border-[var(--accent)] transition-all text-white font-mono"
         />
       </div>
 
       {/* Audit Log Timeline */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center gap-2 text-slate-500">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl shadow-sm overflow-hidden">
+        <div className="p-4 bg-[var(--bg-elevated)] border-b border-[var(--border-default)] flex items-center gap-2 text-slate-400">
           <Terminal size={16} />
-          <span className="text-xs font-bold uppercase tracking-wider">System Event Stream</span>
+          <span className="text-xs font-bold uppercase tracking-wider font-mono">System Event Stream</span>
         </div>
         
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-[var(--border-default)]">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
-              <Loader2 size={32} className="text-indigo-600 animate-spin" />
-              <span className="text-xs text-slate-500 font-semibold">Loading audit logs...</span>
+              <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
+              <span className="text-xs text-slate-400 font-semibold font-mono">Loading audit logs...</span>
             </div>
           ) : filteredLogs.length > 0 ? (
             filteredLogs.map((log) => (
-              <div key={log.id} className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div key={log.id} className="p-6 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex gap-4 items-start">
-                  <div className="p-2.5 bg-slate-50 border border-slate-100 text-slate-600 rounded-lg shrink-0">
+                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] text-slate-400 rounded-lg shrink-0">
                     <Activity size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-slate-850">{log.description}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-500">
+                    <p className="text-sm font-semibold text-white">{log.description}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-400 font-mono">
                       <span className="flex items-center gap-1.5"><User size={13} /> {log.performed_by}</span>
-                      <span className="hidden sm:inline">|</span>
-                      <span>IP: <code className="font-mono bg-slate-50 px-1 rounded text-slate-600">{log.ip_address}</code></span>
+                      <span className="hidden sm:inline text-slate-700">|</span>
+                      <span>IP: <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-slate-350 border border-[var(--border-strong)]">{log.ip_address}</code></span>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right shrink-0">
-                  <span className="text-xs text-slate-400 block font-medium">{log.performed_at}</span>
-                  <span className="inline-flex mt-1 text-[9px] font-bold bg-slate-100 text-slate-600 border border-slate-200 px-1.5 py-0.5 rounded font-mono uppercase">
+                <div className="text-right shrink-0 font-mono">
+                  <span className="text-xs text-slate-500 block font-medium">{log.performed_at}</span>
+                  <span className="inline-flex mt-1 text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/25 px-1.5 py-0.5 rounded uppercase">
                     {log.action}
                   </span>
                 </div>
               </div>
             ))
           ) : (
-            <div className="p-12 text-center text-sm text-slate-400">No logs found matching filter</div>
+            <div className="p-12 text-center text-sm text-slate-400 font-mono">No logs found matching filter</div>
           )}
         </div>
       </div>
