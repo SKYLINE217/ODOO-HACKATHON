@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useSearchStore } from '@/stores/useSearchStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 interface ActivityLog {
   id: string
@@ -73,6 +74,7 @@ const mockLogs: ActivityLog[] = [
 const supabase = createClient()
 
 export default function ActivityLogPage() {
+  const user = useAuthStore(state => state.user)
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
   
@@ -84,9 +86,10 @@ export default function ActivityLogPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
     async function loadLogs() {
       try {
-        const { data: dbLogs, error } = await supabase
+        let query = supabase
           .from('activity_logs')
           .select(`
             id,
@@ -98,7 +101,20 @@ export default function ActivityLogPage() {
             ip_address,
             performed_by_profile:profiles!activity_logs_performed_by_fkey(full_name)
           `)
-          .order('performed_at', { ascending: false })
+
+        if (user?.role === 'vendor') {
+          const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+          const { data: vendorProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('vendor_id', activeVendorId)
+          const profileIds = (vendorProfiles || []).map((p: any) => p.id)
+          if (profileIds.length === 0) profileIds.push(user.id)
+          
+          query = query.in('performed_by', profileIds)
+        }
+
+        const { data: dbLogs, error } = await query.order('performed_at', { ascending: false })
 
         if (error) throw error
 
@@ -127,7 +143,7 @@ export default function ActivityLogPage() {
       }
     }
     loadLogs()
-  }, [])
+  }, [user])
 
   const filteredLogs = logs.filter(log => 
     log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||

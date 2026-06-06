@@ -140,6 +140,7 @@ export default function OnboardingPage() {
           data: {
             full_name: fullName,
             role: finalRole,
+            vendor_id: finalVendorId,
             onboarded: true
           }
         })

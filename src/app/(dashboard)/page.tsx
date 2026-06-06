@@ -96,6 +96,14 @@ export default function DashboardPage() {
         // Strict Vendor Mode Queries
         const activeVendorId = vId || '00000000-0000-0000-0000-000000000000'
 
+        // Get profiles linked to this vendor
+        const { data: vendorProfiles } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('vendor_id', activeVendorId)
+        const profileIds = (vendorProfiles || []).map((p: any) => p.id)
+        if (profileIds.length === 0) profileIds.push(user.id)
+
         const [rfqRes, bidRes, poRes, invoiceRes, activityRes] = await Promise.all([
           supabase.from('rfqs').select('id, status').neq('status', 'draft'),
           supabase.from('quotations').select('id, status', { count: 'exact' }).eq('vendor_id', activeVendorId),
@@ -107,7 +115,7 @@ export default function DashboardPage() {
           supabase.from('activity_logs').select(`
             id, action, description, entity_type, performed_at,
             performer:profiles!activity_logs_performed_by_fkey(full_name)
-          `).order('performed_at', { ascending: false }).limit(20)
+          `).in('performed_by', profileIds).order('performed_at', { ascending: false }).limit(20)
         ])
 
         const rfqs = rfqRes.data || []
