@@ -146,7 +146,7 @@ export default function RfqsPage() {
         }))
       }))
     }
-    const cacheKey = `rfqs:list:${user.role}`
+    const cacheKey = `rfqs:list:${user.id}`
     swr(cacheKey, fetchRfqs, fresh => { if (fresh.length > 0) setRfqs(fresh) })
       .then(data => { if (data.length > 0) setRfqs(data) })
       .catch(() => { const s = localStorage.getItem('vb_rfqs'); if (s) try { setRfqs(JSON.parse(s)) } catch {} })

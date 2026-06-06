@@ -61,38 +61,16 @@ export function useAuth() {
       try {
         setLoading(true)
 
-        // Dev bypass cookie
-        if (typeof window !== 'undefined') {
-          const bypassCookie = document.cookie
-            .split('; ')
-            .find(row => row.startsWith('sb-bypass-session='))
-          if (bypassCookie) {
-            try {
-              const raw = bypassCookie.split('=').slice(1).join('=')
-              const decoded = JSON.parse(decodeURIComponent(raw))
-              setUser({
-                id: decoded.id || 'demo-user-id',
-                full_name: decoded.full_name || 'Demo User',
-                email: decoded.email || '',
-                role: decoded.role || 'admin',
-                avatar_url: decoded.avatar_url || null,
-                department: decoded.department || null,
-                phone: decoded.phone || null,
-              })
-              setLoading(false)
-              return
-            } catch {
-              document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-            }
-          }
-        }
-
         // Get Supabase session
         const { data: { session } } = await supabase.auth.getSession()
 
         if (session?.user) {
+          // Clear any local bypass cookie since we have a real Supabase session
+          if (typeof window !== 'undefined') {
+            document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+          }
+          
           // ✅ KEY FIX: Set user IMMEDIATELY from session data — no DB round-trip needed.
-          // This prevents the black screen when the DB profile is missing/slow.
           setUser(sessionToUser(session))
           setLoading(false)
 
@@ -110,6 +88,33 @@ export function useAuth() {
               })
             }
           }).catch(() => {/* keep session-based user — DB unavailable */})
+        } else {
+          // No real Supabase session, check for bypass cookie
+          if (typeof window !== 'undefined') {
+            const bypassCookie = document.cookie
+              .split('; ')
+              .find(row => row.startsWith('sb-bypass-session='))
+            if (bypassCookie) {
+              try {
+                const raw = bypassCookie.split('=').slice(1).join('=')
+                const decoded = JSON.parse(decodeURIComponent(raw))
+                setUser({
+                  id: decoded.id || 'demo-user-id',
+                  full_name: decoded.full_name || 'Demo User',
+                  email: decoded.email || '',
+                  role: decoded.role || 'admin',
+                  avatar_url: decoded.avatar_url || null,
+                  department: decoded.department || null,
+                  phone: decoded.phone || null,
+                  onboarded: decoded.onboarded !== false, // default true for bypass if not explicitly false
+                })
+                setLoading(false)
+                return
+              } catch {
+                document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+              }
+            }
+          }
         }
       } catch {
         // Auth unavailable — leave user null

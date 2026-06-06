@@ -145,7 +145,7 @@ export default function VendorsPage() {
       }))
     }
 
-    const cacheKey = `vendors:list:${user.role}`
+    const cacheKey = `vendors:list:${user.id}`
     swr(cacheKey, fetchVendors, (fresh) => {
       if (fresh.length > 0) setVendors(fresh)
     }).then(data => {
