@@ -1,12 +1,15 @@
 import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
 import { handleDbQuery } from "@/lib/mysqlQuery";
 
 class MockSupabaseQueryBuilder {
   private tableName: string;
   private chain: Array<{ method: string; args: any[] }> = [];
+  private realSupabase: any;
 
-  constructor(tableName: string) {
+  constructor(tableName: string, realSupabase: any) {
     this.tableName = tableName;
+    this.realSupabase = realSupabase;
   }
 
   select(...args: any[]) { this.chain.push({ method: 'select', args }); return this; }
@@ -22,91 +25,76 @@ class MockSupabaseQueryBuilder {
 
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     try {
-      const result = await handleDbQuery(this.tableName, this.chain);
-      if (onfulfilled) return onfulfilled(result);
-      return result;
+      let sbQuery = this.realSupabase.from(this.tableName);
+      let isMutation = false;
+
+      for (const call of this.chain) {
+        if (['insert', 'update', 'upsert', 'delete'].includes(call.method)) {
+          isMutation = true;
+        }
+        sbQuery = sbQuery[call.method](...call.args);
+      }
+
+      const sbResult = await sbQuery;
+
+      if (isMutation && !sbResult.error) {
+        // Run MySQL sync mutation directly (since we are on server side)
+        handleDbQuery(this.tableName, this.chain).catch(err => 
+          console.warn('MySQL sync server-side mutation failed:', err)
+        );
+      }
+
+      if (!sbResult.error) {
+        if (onfulfilled) return onfulfilled(sbResult);
+        return sbResult;
+      }
+
+      throw sbResult.error;
     } catch (error: any) {
-      const errRes = { data: null, error: { message: error.message || 'Database error' } };
-      if (onfulfilled) return onfulfilled(errRes);
-      return errRes;
+      // Fallback directly to handleDbQuery (MySQL)
+      try {
+        const result = await handleDbQuery(this.tableName, this.chain);
+        if (onfulfilled) return onfulfilled(result);
+        return result;
+      } catch (err) {
+        const errRes = { data: null, error: { message: error.message || 'Database error' } };
+        if (onfulfilled) return onfulfilled(errRes);
+        return errRes;
+      }
     }
   }
 }
 
-function profileToSupabaseUser(profile: any) {
-  if (!profile) return null;
-  return {
-    id: profile.id,
-    email: profile.email,
-    user_metadata: {
-      full_name: profile.full_name,
-      role: profile.role,
-      avatar_url: profile.avatar_url,
-      department: profile.department
-    }
-  };
-}
-
 export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>): any => {
-  const auth = {
-    async signInWithPassword({ email, password }: any) {
-      return { error: { message: 'Not supported on server component context directly.' } };
-    },
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-    async signUp() {
-      return { error: { message: 'Not supported on server component context directly.' } };
-    },
-
-    async signOut() {
-      cookieStore.delete('sb-bypass-session');
-      return { error: null };
-    },
-
-    async getSession() {
-      const cookie = cookieStore.get('sb-bypass-session');
-      if (cookie?.value) {
+  const realSupabase = createServerClient(supabaseUrl, supabaseKey, {
+    cookies: {
+      get(name: string) {
+        return cookieStore.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
         try {
-          const userProfile = JSON.parse(cookie.value);
-          const user = profileToSupabaseUser(userProfile);
-          return { data: { session: { access_token: 'mock', user } }, error: null };
-        } catch {}
-      }
-      return { data: { session: null }, error: null };
-    },
-
-    async getUser() {
-      const cookie = cookieStore.get('sb-bypass-session');
-      if (cookie?.value) {
+          cookieStore.set({ name, value, ...options });
+        } catch (error) {
+          // Ignored if called in Server Component context
+        }
+      },
+      remove(name: string, options: any) {
         try {
-          const userProfile = JSON.parse(cookie.value);
-          const user = profileToSupabaseUser(userProfile);
-          return { data: { user }, error: null };
-        } catch {}
-      }
-      return { data: { user: null }, error: null };
+          cookieStore.set({ name, value: '', ...options });
+        } catch (error) {
+          // Ignored if called in Server Component context
+        }
+      },
     },
-
-    onAuthStateChange() {
-      return { data: { subscription: { unsubscribe() {} } } };
-    },
-
-    async signInWithOAuth() {
-      return { error: null };
-    },
-
-    async updateUser() {
-      return { error: null };
-    },
-
-    async exchangeCodeForSession(code: string) {
-      return { data: { session: null }, error: { message: 'OAuth disabled' } };
-    }
-  };
+  });
 
   return {
-    auth,
+    auth: realSupabase.auth,
     from(tableName: string) {
-      return new MockSupabaseQueryBuilder(tableName);
+      return new MockSupabaseQueryBuilder(tableName, realSupabase);
     }
   };
 };

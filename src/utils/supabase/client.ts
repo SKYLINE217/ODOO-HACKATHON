@@ -1,4 +1,10 @@
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { INITIAL_SEEDS } from './seeds';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+const realSupabase = createSupabaseClient(supabaseUrl, supabaseKey);
 
 function getLocalTable(tableName: string): any[] {
   if (typeof window === 'undefined') return [];
@@ -246,224 +252,63 @@ class MockSupabaseQueryBuilder {
 
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     try {
-      const response = await fetch('/api/db', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ table: this.tableName, chain: this.chain }),
-      });
-      const result = await response.json();
-      
-      if (result.error && (result.error.message.includes('ECONNREFUSED') || result.error.message.includes('connection') || result.error.message.includes('offline'))) {
+      // 1. Run query on real Supabase database
+      let sbQuery = realSupabase.from(this.tableName) as any;
+      let isMutation = false;
+
+      for (const call of this.chain) {
+        if (['insert', 'update', 'upsert', 'delete'].includes(call.method)) {
+          isMutation = true;
+        }
+        sbQuery = sbQuery[call.method](...call.args);
+      }
+
+      const sbResult = await sbQuery;
+
+      // 2. If it's a mutation and was successful, replicate it to MySQL
+      if (isMutation && !sbResult.error) {
+        fetch('/api/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table: this.tableName, chain: this.chain }),
+        }).catch(err => console.warn('MySQL replication failed:', err));
+      }
+
+      if (!sbResult.error) {
+        if (onfulfilled) return onfulfilled(sbResult);
+        return sbResult;
+      }
+
+      throw sbResult.error;
+    } catch (error: any) {
+      // Fallback 1: MySQL API route
+      try {
+        const response = await fetch('/api/db', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ table: this.tableName, chain: this.chain }),
+        });
+        const result = await response.json();
+        
+        if (result.error && (result.error.message.includes('ECONNREFUSED') || result.error.message.includes('connection'))) {
+          throw new Error('MySQL connection failed');
+        }
+
+        if (onfulfilled) return onfulfilled(result);
+        return result;
+      } catch (fallbackErr) {
+        // Fallback 2: Local Storage
         const localResult = runLocalQuery(this.tableName, this.chain);
         if (onfulfilled) return onfulfilled(localResult);
         return localResult;
       }
-      
-      if (onfulfilled) return onfulfilled(result);
-      return result;
-    } catch (error: any) {
-      const localResult = runLocalQuery(this.tableName, this.chain);
-      if (onfulfilled) return onfulfilled(localResult);
-      return localResult;
     }
   }
 }
 
-function getCookie(name: string): string | null {
-  if (typeof document === 'undefined') return null;
-  const value = `; ${document.cookie}`;
-  const parts = value.split(`; ${name}=`);
-  if (parts.length === 2) return decodeURIComponent(parts.pop()!.split(';').shift() || '');
-  return null;
-}
-
-function setCookie(name: string, value: string, maxAge = 86400) {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}`;
-}
-
-function deleteCookie(name: string) {
-  if (typeof document === 'undefined') return;
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-}
-
-function profileToSupabaseUser(profile: any) {
-  if (!profile) return null;
-  return {
-    id: profile.id,
-    email: profile.email,
-    user_metadata: {
-      full_name: profile.full_name,
-      role: profile.role,
-      avatar_url: profile.avatar_url,
-      department: profile.department
-    }
-  };
-}
-
 export const createClient = (): any => {
-  const auth = {
-    async signInWithPassword({ email, password }: any) {
-      try {
-        const result = await fetch('/api/db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            table: 'profiles',
-            chain: [
-              { method: 'select', args: ['*'] },
-              { method: 'eq', args: ['email', email] },
-              { method: 'single', args: [] }
-            ]
-          })
-        });
-        const payload = await result.json();
-        let profile = payload?.data;
-        const apiError = payload?.error;
-        
-        if (!profile || (apiError && (apiError.message.includes('ECONNREFUSED') || apiError.message.includes('offline')))) {
-          const localProfiles = getLocalTable('profiles');
-          profile = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
-          
-          if (!profile) {
-            const registry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}');
-            const regUser = registry[email.toLowerCase()];
-            
-            profile = {
-              id: regUser?.id || 'usr-' + Math.random().toString(36).substring(2, 9),
-              full_name: regUser?.full_name || email.split('@')[0],
-              email: email,
-              role: regUser?.role || (email.includes('admin') ? 'admin' : email.includes('manager') ? 'manager' : email.includes('vendor') ? 'vendor' : 'procurement_officer')
-            };
-            
-            localProfiles.push(profile);
-            saveLocalTable('profiles', localProfiles);
-          }
-        }
-        
-        setCookie('sb-bypass-session', JSON.stringify(profile));
-        const sbUser = profileToSupabaseUser(profile);
-        return { data: { user: sbUser, session: { access_token: 'mock', user: sbUser } }, error: null };
-      } catch (err: any) {
-        const localProfiles = getLocalTable('profiles');
-        let profile = localProfiles.find(p => p.email.toLowerCase() === email.toLowerCase());
-        if (!profile) {
-          profile = {
-            id: 'usr-fallback',
-            full_name: email.split('@')[0],
-            email: email,
-            role: email.includes('admin') ? 'admin' : email.includes('manager') ? 'manager' : email.includes('vendor') ? 'vendor' : 'procurement_officer'
-          };
-        }
-        setCookie('sb-bypass-session', JSON.stringify(profile));
-        const sbUser = profileToSupabaseUser(profile);
-        return { data: { user: sbUser, session: { access_token: 'mock', user: sbUser } }, error: null };
-      }
-    },
-
-    async signUp({ email, password, options }: any) {
-      try {
-        const profile = {
-          id: 'usr-' + Math.random().toString(36).substring(2, 9),
-          full_name: options?.data?.full_name || email.split('@')[0],
-          email: email,
-          role: options?.data?.role || 'procurement_officer'
-        };
-        
-        const response = await fetch('/api/db', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            table: 'profiles',
-            chain: [{ method: 'upsert', args: [profile] }]
-          })
-        });
-        const result = await response.json();
-        
-        if (result.error && (result.error.message.includes('ECONNREFUSED') || result.error.message.includes('offline'))) {
-          const localProfiles = getLocalTable('profiles');
-          localProfiles.push(profile);
-          saveLocalTable('profiles', localProfiles);
-        }
-        
-        setCookie('sb-bypass-session', JSON.stringify(profile));
-        const sbUser = profileToSupabaseUser(profile);
-        return { data: { user: sbUser, session: { access_token: 'mock', user: sbUser } }, error: null };
-      } catch (err: any) {
-        const profile = {
-          id: 'usr-' + Math.random().toString(36).substring(2, 9),
-          full_name: options?.data?.full_name || email.split('@')[0],
-          email: email,
-          role: options?.data?.role || 'procurement_officer'
-        };
-        const localProfiles = getLocalTable('profiles');
-        localProfiles.push(profile);
-        saveLocalTable('profiles', localProfiles);
-        
-        setCookie('sb-bypass-session', JSON.stringify(profile));
-        const sbUser = profileToSupabaseUser(profile);
-        return { data: { user: sbUser, session: { access_token: 'mock', user: sbUser } }, error: null };
-      }
-    },
-
-    async signOut() {
-      deleteCookie('sb-bypass-session');
-      return { error: null };
-    },
-
-    async getSession() {
-      const cookieStr = getCookie('sb-bypass-session');
-      if (cookieStr) {
-        try {
-          const userProfile = JSON.parse(cookieStr);
-          const user = profileToSupabaseUser(userProfile);
-          return { data: { session: { access_token: 'mock', user } }, error: null };
-        } catch {
-          // ignore
-        }
-      }
-      return { data: { session: null }, error: null };
-    },
-
-    async getUser() {
-      const cookieStr = getCookie('sb-bypass-session');
-      if (cookieStr) {
-        try {
-          const userProfile = JSON.parse(cookieStr);
-          const user = profileToSupabaseUser(userProfile);
-          return { data: { user }, error: null };
-        } catch {
-          // ignore
-        }
-      }
-      return { data: { user: null }, error: null };
-    },
-
-    onAuthStateChange(callback: any) {
-      const cookieStr = getCookie('sb-bypass-session');
-      let session = null;
-      if (cookieStr) {
-        try {
-          const userProfile = JSON.parse(cookieStr);
-          const user = profileToSupabaseUser(userProfile);
-          session = { access_token: 'mock', user };
-        } catch {}
-      }
-      callback('INITIAL_SESSION', session);
-      return { data: { subscription: { unsubscribe() {} } } };
-    },
-
-    async signInWithOAuth({ provider, options }: any) {
-      return { error: { message: 'Google Sign-In is not enabled. Please log in with password.' } };
-    },
-
-    async updateUser({ password }: any) {
-      return { error: null };
-    }
-  };
-
   return {
-    auth,
+    auth: realSupabase.auth,
     from(tableName: string) {
       return new MockSupabaseQueryBuilder(tableName);
     }
