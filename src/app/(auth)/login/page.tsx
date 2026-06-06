@@ -223,15 +223,6 @@ export default function LoginPage() {
             </span>
           </div>
 
-          {/* Quick Demo Help */}
-          <div className="mt-6 border-t border-slate-800/80 pt-6">
-            <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 flex gap-2.5 items-start">
-              <ShieldCheck size={18} className="text-indigo-400 shrink-0 mt-0.5" />
-              <p className="text-[11px] text-slate-400 leading-normal">
-                <strong>Email Bypass Active:</strong> If email confirmation is required, you can sign up on the registration page and immediately log in with that email/password here.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

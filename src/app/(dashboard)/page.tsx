@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { 
   FilePlus, UserPlus, CheckSquare, ArrowUpRight, ArrowDownRight,
-  TrendingUp, Clock, Activity, CheckCircle2, XCircle, FileText,
-  Coins, Loader2, AlertCircle, Package, ReceiptText
+  Activity, CheckCircle2, AlertCircle, ReceiptText, Coins, Loader2
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@/utils/supabase/client'
@@ -31,17 +30,17 @@ interface ActivityItem {
   performed_at: string
 }
 
-const ACTION_STYLE: Record<string, string> = {
-  CREATE:  'text-indigo-600 bg-indigo-50 border-indigo-100',
-  PUBLISH: 'text-violet-600 bg-violet-50 border-violet-100',
-  APPROVE: 'text-emerald-600 bg-emerald-50 border-emerald-100',
-  REJECT:  'text-rose-600 bg-rose-50 border-rose-100',
-  PAY:     'text-green-600 bg-green-50 border-green-100',
-  SUBMIT:  'text-amber-600 bg-amber-50 border-amber-100',
-  FULFILL: 'text-teal-600 bg-teal-50 border-teal-100',
-  SUSPEND: 'text-orange-600 bg-orange-50 border-orange-100',
-  RECEIVE: 'text-blue-600 bg-blue-50 border-blue-100',
-  ISSUE:   'text-sky-600 bg-sky-50 border-sky-100',
+const ACTION_STYLE: Record<string, { bg: string, text: string, border: string }> = {
+  CREATE:  { bg: 'rgba(99, 102, 241, 0.1)', text: '#818CF8', border: 'rgba(99, 102, 241, 0.2)' },
+  PUBLISH: { bg: 'rgba(139, 92, 246, 0.1)', text: '#A78BFA', border: 'rgba(139, 92, 246, 0.2)' },
+  APPROVE: { bg: 'rgba(16, 185, 129, 0.1)', text: '#34D399', border: 'rgba(16, 185, 129, 0.2)' },
+  REJECT:  { bg: 'rgba(244, 63, 94, 0.1)',  text: '#FB7185', border: 'rgba(244, 63, 94, 0.2)' },
+  PAY:     { bg: 'rgba(34, 197, 94, 0.1)',  text: '#4ADE80', border: 'rgba(34, 197, 94, 0.2)' },
+  SUBMIT:  { bg: 'rgba(245, 158, 11, 0.1)', text: '#FBBF24', border: 'rgba(245, 158, 11, 0.2)' },
+  FULFILL: { bg: 'rgba(20, 184, 166, 0.1)', text: '#2DD4BF', border: 'rgba(20, 184, 166, 0.2)' },
+  SUSPEND: { bg: 'rgba(249, 115, 22, 0.1)', text: '#FB923C', border: 'rgba(249, 115, 22, 0.2)' },
+  RECEIVE: { bg: 'rgba(59, 130, 246, 0.1)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.2)' },
+  ISSUE:   { bg: 'rgba(14, 165, 233, 0.1)', text: '#38BDF8', border: 'rgba(14, 165, 233, 0.2)' },
 }
 
 function timeAgo(dateStr: string) {
@@ -74,7 +73,6 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoading(true)
     try {
-      // Run all queries in parallel
       const [rfqRes, vendorRes, approvalRes, spendRes, activityRes, invoiceRes] = await Promise.all([
         supabase.from('rfqs').select('id, status').order('created_at', { ascending: false }),
         supabase.from('vendors').select('id, status').order('created_at', { ascending: false }),
@@ -94,20 +92,17 @@ export default function DashboardPage() {
         `).order('created_at', { ascending: false }).limit(5),
       ])
 
-      // KPI: Active RFQs
+      // Data extraction with safe fallbacks
       const rfqs = rfqRes.data || []
       const activeRfqs = rfqs.filter(r => r.status === 'published').length
       const draftRfqs = rfqs.filter(r => r.status === 'draft').length
 
-      // KPI: Vendors
       const vendors = vendorRes.data || []
       const activeVendors = vendors.filter(v => v.status === 'active').length
       const pendingVendors = vendors.filter(v => v.status === 'pending').length
 
-      // KPI: Pending approvals
       const approvalCount = approvalRes.data?.length || 0
 
-      // KPI: Total spend (paid invoices)
       const invoices = spendRes.data || []
       const totalSpend = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.total_amount) || 0), 0)
       const totalCommitted = invoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0)
@@ -151,88 +146,80 @@ export default function DashboardPage() {
         }
       ])
 
-      // Activity feed
-      const acts = (activityRes.data || []).map((a: any) => ({
+      setActivities((activityRes.data || []).map((a: any) => ({
         id: a.id,
         action: a.action,
         description: a.description,
         entity_type: a.entity_type,
         performed_by_name: a.performer?.full_name || 'System',
         performed_at: a.performed_at,
-      }))
-      setActivities(acts)
+      })))
 
-      // Pending approvals detail
       setPendingApprovals(approvalRes.data || [])
-
-      // Recent invoices
       setRecentInvoices(invoiceRes.data || [])
 
     } catch (err) {
-      // Supabase unavailable — leave empty (UI handles empty state gracefully)
+      console.error("Dashboard Data Fetch Error:", err)
     } finally {
       setLoading(false)
     }
   }
 
   const kpiColorMap = {
-    indigo: { bg: 'bg-indigo-50', icon: 'text-indigo-600', badge: 'bg-indigo-600' },
-    amber:  { bg: 'bg-amber-50',  icon: 'text-amber-600',  badge: 'bg-amber-600' },
-    emerald:{ bg: 'bg-emerald-50',icon: 'text-emerald-600',badge: 'bg-emerald-600' },
-    rose:   { bg: 'bg-rose-50',   icon: 'text-rose-600',   badge: 'bg-rose-600' },
+    indigo:  { bg: 'rgba(99, 102, 241, 0.1)', icon: '#818CF8' },
+    amber:   { bg: 'var(--accent-subtle)',    icon: 'var(--accent)' },
+    emerald: { bg: 'rgba(16, 185, 129, 0.1)', icon: '#34D399' },
+    rose:    { bg: 'rgba(244, 63, 94, 0.1)',  icon: '#FB7185' },
   }
 
   if (loading) {
     return (
-      <div className="space-y-8 animate-in fade-in duration-300">
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-              <div className="w-20 h-3 bg-slate-200 rounded animate-pulse mb-4" />
-              <div className="w-16 h-8 bg-slate-200 rounded animate-pulse mb-2" />
-              <div className="w-28 h-2 bg-slate-100 rounded animate-pulse" />
+            <div key={i} className="card">
+              <div className="skeleton" style={{ width: '80px', height: '12px', marginBottom: '16px' }} />
+              <div className="skeleton" style={{ width: '60px', height: '32px', marginBottom: '8px' }} />
+              <div className="skeleton" style={{ width: '120px', height: '10px' }} />
             </div>
           ))}
-        </div>
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={32} className="text-indigo-600 animate-spin" />
         </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-
+    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Greeting */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.full_name?.split(' ')[0]} 👋
         </h1>
-        <p className="text-slate-500 text-sm mt-1">Here's what's happening across your procurement operations today.</p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+          Here's what's happening across your procurement operations today.
+        </p>
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
         {kpis.map((kpi) => {
           const colors = kpiColorMap[kpi.color]
           const Icon = kpi.icon
           return (
-            <div key={kpi.title} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all group">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">{kpi.title}</span>
-                <div className={`p-2 rounded-lg ${colors.bg} ${colors.icon} group-hover:scale-110 transition-transform`}>
-                  <Icon size={16} />
+            <div key={kpi.title} className="card card-hover" style={{ display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                <span className="label" style={{ marginBottom: 0 }}>{kpi.title}</span>
+                <div style={{ padding: '8px', borderRadius: '8px', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Icon size={16} color={colors.icon} />
                 </div>
               </div>
-              <div className="text-2xl font-extrabold text-slate-800 tracking-tight mb-1">{kpi.value}</div>
-              <div className="flex items-center gap-1.5 text-xs">
-                {kpi.isUp
-                  ? <ArrowUpRight size={13} className="text-emerald-500" />
-                  : <ArrowDownRight size={13} className="text-rose-400" />
-                }
-                <span className={kpi.isUp ? 'text-emerald-600 font-semibold' : 'text-rose-500 font-semibold'}>{kpi.change}</span>
-                <span className="text-slate-400">{kpi.subtext}</span>
+              <div style={{ fontFamily: 'var(--font-display)', fontSize: '32px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.1, marginBottom: '6px' }}>
+                {kpi.value}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {kpi.isUp ? <ArrowUpRight size={14} color="#34D399" /> : <ArrowDownRight size={14} color="#FB7185" />}
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: kpi.isUp ? '#34D399' : '#FB7185' }}>{kpi.change}</span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)' }}>{kpi.subtext}</span>
               </div>
             </div>
           )
@@ -240,38 +227,54 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Grid */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-        {/* Activity Feed — 2/3 width */}
-        <div className="xl:col-span-2 bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity size={16} className="text-indigo-600" />
-              <h3 className="font-bold text-slate-800 text-sm">Live Activity Feed</h3>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+        
+        {/* Activity Feed */}
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity size={16} color="var(--accent)" />
+              <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Live Activity Feed</h3>
             </div>
-            <Link href="/activity" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+            <Link href="/activity" style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>
               View all <ArrowUpRight size={12} />
             </Link>
           </div>
-          <div className="divide-y divide-slate-50">
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
             {activities.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 gap-2">
-                <Activity size={28} className="text-slate-300" />
-                <p className="text-sm text-slate-400">No activity yet. Start by creating an RFQ.</p>
+              <div style={{ padding: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <Activity size={28} color="var(--text-muted)" />
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)' }}>No activity yet. Start by creating an RFQ.</p>
               </div>
             ) : (
-              activities.map((item) => {
-                const style = ACTION_STYLE[item.action] || 'text-slate-600 bg-slate-50 border-slate-100'
+              activities.map((item, idx) => {
+                const style = ACTION_STYLE[item.action] || { bg: 'var(--bg-elevated)', text: 'var(--text-secondary)', border: 'var(--border-strong)' }
                 return (
-                  <div key={item.id} className="px-6 py-3.5 flex items-start gap-4 hover:bg-slate-50/60 transition-colors">
-                    <span className={`mt-0.5 shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wide ${style}`}>
+                  <div key={item.id} style={{
+                    padding: '14px 24px',
+                    borderBottom: idx === activities.length - 1 ? 'none' : '1px solid var(--border-default)',
+                    display: 'flex', alignItems: 'flex-start', gap: '16px',
+                    transition: 'background 150ms', cursor: 'default'
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                  >
+                    <span style={{
+                      marginTop: '2px', flexShrink: 0, fontSize: '9px', fontWeight: 700, padding: '2px 6px',
+                      borderRadius: '4px', border: `1px solid ${style.border}`, background: style.bg, color: style.text,
+                      fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.06em'
+                    }}>
                       {item.action}
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-slate-700 leading-snug">{item.description}</p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">by <span className="font-semibold text-slate-600">{item.performed_by_name}</span></p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.4 }}>{item.description}</p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        by <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{item.performed_by_name}</span>
+                      </p>
                     </div>
-                    <span className="text-[10px] text-slate-400 shrink-0 mt-0.5 font-mono">{timeAgo(item.performed_at)}</span>
+                    <span style={{ flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                      {timeAgo(item.performed_at)}
+                    </span>
                   </div>
                 )
               })
@@ -280,41 +283,51 @@ export default function DashboardPage() {
         </div>
 
         {/* Right Column */}
-        <div className="space-y-6">
-
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
           {/* Pending Approvals */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle size={15} className="text-amber-500" />
-                <h3 className="font-bold text-slate-800 text-sm">Needs Approval</h3>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={15} color="#FBBF24" />
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Needs Approval</h3>
               </div>
-              <Link href="/approvals" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+              <Link href="/approvals" style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>
                 All <ArrowUpRight size={12} />
               </Link>
             </div>
-            <div className="divide-y divide-slate-50">
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {pendingApprovals.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 gap-2">
-                  <CheckCircle2 size={24} className="text-emerald-400" />
-                  <p className="text-xs text-slate-400">All caught up! No pending approvals.</p>
+                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={24} color="#34D399" />
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>All caught up! No pending approvals.</p>
                 </div>
               ) : (
-                pendingApprovals.map((a: any) => (
-                  <div key={a.id} className="px-5 py-3 hover:bg-amber-50/40 transition-colors">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold text-slate-800 truncate">
-                          {(a.quotation as any)?.rfq?.title || 'Procurement Approval'}
-                        </p>
-                        <p className="text-[11px] text-slate-400 mt-0.5">
-                          {(a.quotation as any)?.quotation_number} · by {(a.requester as any)?.full_name}
-                        </p>
-                      </div>
-                      <span className="shrink-0 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                        {formatINR(Number((a.quotation as any)?.total_amount) || 0)}
-                      </span>
+                pendingApprovals.map((a: any, idx) => (
+                  <div key={a.id} style={{
+                    padding: '12px 20px',
+                    borderBottom: idx === pendingApprovals.length - 1 ? 'none' : '1px solid var(--border-default)',
+                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px',
+                    transition: 'background 150ms'
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {(a.quotation as any)?.rfq?.title || 'Procurement Approval'}
+                      </p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                        {(a.quotation as any)?.quotation_number} · by {(a.requester as any)?.full_name}
+                      </p>
                     </div>
+                    <span style={{
+                      flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600,
+                      color: 'var(--accent)', background: 'var(--accent-subtle)', padding: '2px 6px', borderRadius: '4px',
+                      border: '1px solid rgba(245, 158, 11, 0.2)'
+                    }}>
+                      {formatINR(Number((a.quotation as any)?.total_amount) || 0)}
+                    </span>
                   </div>
                 ))
               )}
@@ -322,68 +335,46 @@ export default function DashboardPage() {
           </div>
 
           {/* Recent Invoices */}
-          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ReceiptText size={15} className="text-rose-500" />
-                <h3 className="font-bold text-slate-800 text-sm">Recent Invoices</h3>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ReceiptText size={15} color="#FB7185" />
+                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Recent Invoices</h3>
               </div>
-              <Link href="/invoices" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 flex items-center gap-1">
+              <Link href="/invoices" style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>
                 All <ArrowUpRight size={12} />
               </Link>
             </div>
-            <div className="divide-y divide-slate-50">
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
               {recentInvoices.length === 0 ? (
-                <p className="text-xs text-slate-400 text-center py-8">No invoices yet.</p>
+                <div style={{ padding: '32px', textAlign: 'center' }}>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>No invoices yet.</p>
+                </div>
               ) : (
-                recentInvoices.map((inv: any) => (
-                  <div key={inv.id} className="px-5 py-3 flex items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors">
-                    <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-700 font-mono">{inv.invoice_number}</p>
-                      <p className="text-[11px] text-slate-400 truncate">{inv.vendor?.company_name}</p>
+                recentInvoices.map((inv: any, idx) => (
+                  <div key={inv.id} style={{
+                    padding: '12px 20px',
+                    borderBottom: idx === recentInvoices.length - 1 ? 'none' : '1px solid var(--border-default)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                    transition: 'background 150ms'
+                  }}
+                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--bg-subtle)'}
+                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>{inv.invoice_number}</p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{inv.vendor?.company_name}</p>
                     </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-xs font-bold text-slate-800">{formatINR(Number(inv.total_amount) || 0)}</p>
-                      <span className={`text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                        inv.status === 'paid' ? 'text-emerald-700 bg-emerald-50' :
-                        inv.status === 'overdue' ? 'text-rose-700 bg-rose-50' :
-                        'text-amber-700 bg-amber-50'
-                      }`}>{inv.status}</span>
-                    </div>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>
+                      {formatINR(Number(inv.total_amount) || 0)}
+                    </span>
                   </div>
                 ))
               )}
             </div>
           </div>
-
         </div>
       </div>
-
-      {/* Quick Action Bar */}
-      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg shadow-indigo-500/20">
-        <div>
-          <h4 className="text-white font-bold">Ready to start a new procurement?</h4>
-          <p className="text-indigo-200 text-sm mt-0.5">Create an RFQ, invite vendors, and track bids in one place.</p>
-        </div>
-        <div className="flex gap-3 shrink-0">
-          {(user?.role === 'admin' || user?.role === 'procurement_officer') && (
-            <Link href="/rfqs" className="inline-flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-700 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors shadow-sm">
-              <FilePlus size={15} /> New RFQ
-            </Link>
-          )}
-          {(user?.role === 'admin' || user?.role === 'procurement_officer') && (
-            <Link href="/vendors" className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors">
-              <UserPlus size={15} /> Add Vendor
-            </Link>
-          )}
-          {(user?.role === 'admin' || user?.role === 'manager') && (
-            <Link href="/approvals" className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 text-white border border-white/20 rounded-lg text-sm font-bold hover:bg-white/20 transition-colors">
-              <CheckSquare size={15} /> Approvals
-            </Link>
-          )}
-        </div>
-      </div>
-
     </div>
   )
 }
