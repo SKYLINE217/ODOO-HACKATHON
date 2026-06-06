@@ -7,7 +7,8 @@ interface ChainCall {
 }
 
 export async function handleDbQuery(table: string, chain: ChainCall[]) {
-  // Parse Chain Calls
+  try {
+    // Parse Chain Calls
   let operation: 'select' | 'insert' | 'update' | 'upsert' | 'delete' = 'select';
   let selectColumns = '*';
   const eqFilters: { column: string; value: any }[] = [];
@@ -381,4 +382,8 @@ export async function handleDbQuery(table: string, chain: ChainCall[]) {
   }
 
   throw new Error(`Unsupported operation: ${operation}`);
+  } catch (err: any) {
+    console.error(`Database query error for table ${table}:`, err);
+    return { data: null, error: { message: err.message || 'Database query failed' } };
+  }
 }

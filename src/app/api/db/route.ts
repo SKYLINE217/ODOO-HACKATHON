@@ -13,6 +13,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(result);
   } catch (err: any) {
     console.error('API Database Route Error:', err);
-    return NextResponse.json({ data: null, error: { message: err.message || 'Database error occurred' } }, { status: 500 });
+    return NextResponse.json({ data: null, error: { message: err.message || 'Database error occurred' } }, { status: 200 });
   }
 }
