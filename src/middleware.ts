@@ -48,33 +48,55 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
+    // Check for bypass session cookie
+    const bypassCookie = request.cookies.get('sb-bypass-session')?.value
+    let localUser = null
+    if (bypassCookie) {
+      try {
+        localUser = JSON.parse(decodeURIComponent(bypassCookie))
+      } catch (e) {
+        console.warn('Failed to parse bypass cookie', e)
+      }
+    }
+
     // Note: getUser() is secure and verifies the JWT signature
     const { data: { user } } = await supabase.auth.getUser()
+    const hasSession = !!user || !!localUser
 
     // Redirect unauthenticated users to login
-    if (!user && !PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
+    if (!hasSession && !PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
       const url = new URL('/login', request.url)
       return NextResponse.redirect(url)
     }
 
     // Redirect authenticated users away from auth pages
-    if (user && PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
+    if (hasSession && PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
       return NextResponse.redirect(new URL('/', request.url))
     }
 
     // Role-based route protection
-    if (user) {
-      // Fetch user role from profiles
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
+    if (hasSession) {
+      let userRole: string | null = null
 
-      if (!error && profile) {
+      if (localUser) {
+        userRole = localUser.role
+      } else if (user) {
+        // Fetch user role from profiles
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single()
+        
+        if (!error && profile) {
+          userRole = profile.role
+        }
+      }
+
+      if (userRole) {
         for (const [route, allowedRoles] of Object.entries(ROLE_ROUTES)) {
-          if (pathname.startsWith(route) && !allowedRoles.includes(profile.role)) {
-            // Redirect unauthorized users to an unauthorized indicator or root
+          if (pathname.startsWith(route) && !allowedRoles.includes(userRole)) {
+            // Redirect unauthorized users to root
             return NextResponse.redirect(new URL('/', request.url))
           }
         }

@@ -53,16 +53,18 @@ export default function SignupPage() {
 
       // If signup succeeds and session is created immediately (confirmations disabled)
       if (data?.session) {
-        setUser({
+        const profile = {
           id: data.user?.id || 'demo-user-id',
           full_name: fullName,
           email: email,
           role: role,
           avatar_url: null,
           department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
-        })
+        }
+        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+        setUser(profile)
         setMessage({ type: 'success', text: 'Registration successful! Redirecting...' })
-        setTimeout(() => router.push('/'), 1200)
+        setTimeout(() => { window.location.href = '/' }, 1200)
       } else {
         // Confirmation email is sent. However, since the user wants to sign in without email confirmation,
         // we inform them we've registered their details locally to bypass the check at the sign-in screen!
@@ -70,22 +72,25 @@ export default function SignupPage() {
           type: 'success', 
           text: 'Account registered! You can now log in directly at the Sign In page (email verification has been bypassed for you).' 
         })
-        setTimeout(() => router.push('/login'), 3500)
+        setTimeout(() => { window.location.href = '/login' }, 3500)
       }
     } catch (err: any) {
-      console.warn('Supabase Auth signup failed/blocked, saved details locally for bypass:', err.message)
+      console.warn('Supabase Auth signup failed/blocked, saved details locally for bypass:', err?.message)
       
       // Fallback: Login immediately in local state
-      setUser({
+      const profile = {
         id: 'mock-' + Math.random().toString(36).substring(2, 9),
         full_name: fullName || 'New Demo User',
         email: email || 'demo@vendorbridge.io',
         role: role,
         avatar_url: null,
         department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
-      })
+      }
+
+      document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+      setUser(profile)
       setMessage({ type: 'success', text: 'Local account registered! Redirecting...' })
-      setTimeout(() => router.push('/'), 1200)
+      setTimeout(() => { window.location.href = '/' }, 1200)
     } finally {
       setLoading(false)
     }

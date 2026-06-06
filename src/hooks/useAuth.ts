@@ -10,6 +10,29 @@ export function useAuth() {
     async function fetchUser() {
       try {
         setLoading(true)
+        
+        // First check for bypass session cookie
+        if (typeof window !== 'undefined') {
+          const bypassCookie = document.cookie
+            .split('; ')
+            .find(row => row.startsWith('sb-bypass-session='))
+          
+          if (bypassCookie) {
+            const decodedValue = decodeURIComponent(bypassCookie.split('=')[1])
+            const decoded = JSON.parse(decodedValue)
+            setUser({
+              id: decoded.id || 'demo-user-id',
+              full_name: decoded.full_name,
+              email: decoded.email || '',
+              role: decoded.role,
+              avatar_url: decoded.avatar_url || null,
+              department: decoded.department || null
+            })
+            setLoading(false)
+            return
+          }
+        }
+
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           const { data: profile, error } = await supabase

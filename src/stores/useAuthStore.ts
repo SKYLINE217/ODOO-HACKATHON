@@ -29,5 +29,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: false,
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
-  logout: () => set({ user: null })
+  logout: () => {
+    if (typeof window !== 'undefined') {
+      document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+    }
+    set({ user: null })
+  }
 }))

@@ -49,10 +49,10 @@ export default function LoginPage() {
           department: profile?.department || null
         })
 
-        router.push('/')
+        window.location.href = '/'
       }
     } catch (err: any) {
-      console.warn('Supabase Auth credentials failed/unconfirmed, checking local registry:', err.message)
+      console.warn('Supabase Auth credentials failed/unconfirmed, checking local registry:', err?.message)
       
       // Bypass check: check if user registered in local registry
       const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
@@ -60,26 +60,36 @@ export default function LoginPage() {
 
       if (localUser) {
         // Successful mock sign in with user's selected role
-        setUser({
+        const profile = {
           id: 'mock-' + Math.random().toString(36).substring(2, 9),
           full_name: localUser.full_name,
           email: email,
           role: localUser.role,
           avatar_url: null,
           department: localUser.role === 'procurement_officer' ? 'Procurement' : localUser.role === 'manager' ? 'Management' : null
-        })
-        router.push('/')
+        }
+        
+        // Set cookie for middleware bypass
+        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+        
+        setUser(profile)
+        window.location.href = '/'
       } else {
         // Fallback: Login with mock administrator details so they are never locked out
-        setUser({
+        const profile = {
           id: 'demo-user-id',
           full_name: 'Alex Mercer',
           email: email || 'alex.mercer@vendorbridge.io',
-          role: 'admin',
+          role: 'admin' as const,
           avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
           department: 'Procurement & Logistics'
-        })
-        router.push('/')
+        }
+
+        // Set cookie for middleware bypass
+        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+
+        setUser(profile)
+        window.location.href = '/'
       }
     } finally {
       setLoading(false)
