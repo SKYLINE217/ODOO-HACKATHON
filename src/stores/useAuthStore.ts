@@ -10,6 +10,7 @@ export interface UserProfile {
   department: string | null
   phone?: string | null
   vendor_id?: string | null
+  onboarded?: boolean
 }
 
 interface AuthState {

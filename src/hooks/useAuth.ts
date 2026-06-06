@@ -45,6 +45,7 @@ function sessionToUser(session: any): UserProfile {
     department: null,
     phone: meta.phone || null,
     vendor_id: meta.vendor_id || null,
+    onboarded: !!meta.onboarded,
   }
 }
 
@@ -102,7 +103,12 @@ export function useAuth() {
             session.user.email || '',
             meta.full_name || meta.name || '',
           ).then(profile => {
-            if (profile) setUser(profile)
+            if (profile) {
+              setUser({
+                ...profile,
+                onboarded: !!meta.onboarded
+              })
+            }
           }).catch(() => {/* keep session-based user — DB unavailable */})
         }
       } catch {
@@ -137,7 +143,12 @@ export function useAuth() {
             session.user.email || '',
             meta.full_name || meta.name || '',
           ).then(profile => {
-            if (profile) setUser(profile)
+            if (profile) {
+              setUser({
+                ...profile,
+                onboarded: !!meta.onboarded
+              })
+            }
           }).catch(() => {})
           return
         }

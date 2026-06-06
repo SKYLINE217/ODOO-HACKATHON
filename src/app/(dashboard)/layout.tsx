@@ -133,7 +133,13 @@ function DashboardGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (loading || oauthGrace) return
-    if (!user) router.replace('/login')
+    if (!user) {
+      router.replace('/login')
+      return
+    }
+    if (!user.onboarded) {
+      router.replace('/onboarding')
+    }
   }, [user, loading, oauthGrace, router])
 
   if (loading || oauthGrace) {

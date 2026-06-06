@@ -60,9 +60,12 @@ export default function OnboardingPage() {
       const { data: { session } } = await supabase.auth.getSession()
       const activeUser = session?.user || user
 
-      if (activeUser) {
-        setFullName(activeUser.user_metadata?.full_name || activeUser.user_metadata?.name || activeUser.email?.split('@')[0] || '')
+      if (!activeUser) {
+        router.replace('/login')
+        return
       }
+
+      setFullName(activeUser.user_metadata?.full_name || activeUser.user_metadata?.name || activeUser.email?.split('@')[0] || '')
 
       // Fetch vendors list for Step 2
       try {

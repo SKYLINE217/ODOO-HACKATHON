@@ -15,7 +15,6 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'procurement_officer' | 'manager' | 'vendor'>('procurement_officer')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
@@ -57,7 +56,8 @@ export default function SignupPage() {
     const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
     usersRegistry[email.toLowerCase()] = {
       full_name: fullName,
-      role: role,
+      role: 'procurement_officer',
+      onboarded: false,
       password: password // store temporarily for developer testing match
     }
     localStorage.setItem('vb_users_registry', JSON.stringify(usersRegistry))
@@ -70,7 +70,8 @@ export default function SignupPage() {
         options: {
           data: {
             full_name: fullName,
-            role: role
+            role: 'procurement_officer',
+            onboarded: false
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`
         }
@@ -86,17 +87,17 @@ export default function SignupPage() {
           id: data.user?.id || 'demo-user-id',
           full_name: fullName,
           email: email,
-          role: role,
+          role: 'procurement_officer' as const,
           avatar_url: null,
-          department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
+          department: null,
+          onboarded: false
         }
         document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
         setUser(profile)
-        setMessage({ type: 'success', text: 'Registration successful! Redirecting...' })
-        setTimeout(() => { window.location.href = '/' }, 1200)
+        setMessage({ type: 'success', text: 'Registration successful! Redirecting to setup...' })
+        setTimeout(() => { window.location.href = '/onboarding' }, 1200)
       } else {
-        // Confirmation email is sent. However, since the user wants to sign in without email confirmation,
-        // we inform them we've registered their details locally to bypass the check at the sign-in screen!
+        // Confirmation email is sent.
         setMessage({ 
           type: 'success', 
           text: 'Account registered! You can now log in directly at the Sign In page (email verification has been bypassed for you).' 
@@ -111,15 +112,16 @@ export default function SignupPage() {
         id: 'mock-' + Math.random().toString(36).substring(2, 9),
         full_name: fullName || 'New Demo User',
         email: email || 'demo@vendorbridge.io',
-        role: role,
+        role: 'procurement_officer' as const,
         avatar_url: null,
-        department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
+        department: null,
+        onboarded: false
       }
 
       document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
       setUser(profile)
-      setMessage({ type: 'success', text: 'Local account registered! Redirecting...' })
-      setTimeout(() => { window.location.href = '/' }, 1200)
+      setMessage({ type: 'success', text: 'Local account registered! Redirecting to setup...' })
+      setTimeout(() => { window.location.href = '/onboarding' }, 1200)
     } finally {
       setLoading(false)
     }
@@ -226,21 +228,6 @@ export default function SignupPage() {
               </div>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-[var(--text-secondary)] uppercase tracking-widest font-mono">
-                Account Role
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value as any)}
-                className="mt-1.5 block w-full px-3 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] focus:ring-1 focus:ring-[var(--accent)] text-sm transition-all cursor-pointer font-mono"
-              >
-                <option value="procurement_officer">Procurement Officer</option>
-                <option value="vendor">Vendor Bidding Portal</option>
-                <option value="manager">Manager / Approver</option>
-                <option value="admin">System Admin</option>
-              </select>
-            </div>
 
             <div className="pt-2">
               <button
