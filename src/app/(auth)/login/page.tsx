@@ -55,11 +55,19 @@ const VALID_PASSWORDS = ['admin', 'password', 'admin@123', 'password123', 'pass1
 async function setBypassSession(profile: object): Promise<void> {
   const sessionStr = JSON.stringify(profile);
   
-  // 1. Set localStorage (100% reliable client-side)
-  localStorage.setItem('vb_session', sessionStr);
+  try {
+    // 1. Set localStorage (100% reliable client-side)
+    localStorage.setItem('vb_session', sessionStr);
+  } catch (err) {
+    console.warn('localStorage blocked', err);
+  }
   
-  // 2. Set Cookie as fallback
-  document.cookie = `sb-bypass-session=${encodeURIComponent(sessionStr)}; path=/; max-age=86400; SameSite=Lax`;
+  try {
+    // 2. Set Cookie as fallback
+    document.cookie = `sb-bypass-session=${encodeURIComponent(sessionStr)}; path=/; max-age=86400; SameSite=Lax; Secure`;
+  } catch (err) {
+    console.warn('Cookie blocked', err);
+  }
   
   window.location.href = '/';
 }
