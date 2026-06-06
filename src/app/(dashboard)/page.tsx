@@ -2,6 +2,22 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06
+    }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: { opacity: 1, y: 0, transition: { type: 'spring' as const, stiffness: 350, damping: 26 } }
+}
 import { 
   FilePlus, UserPlus, CheckSquare, ArrowUpRight, ArrowDownRight,
   Activity, CheckCircle2, AlertCircle, ReceiptText, Coins, Loader2
@@ -189,24 +205,24 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="page-enter" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+    <motion.div className="page-enter" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       {/* Greeting */}
-      <div>
+      <motion.div variants={itemVariants}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.full_name?.split(' ')[0]} 👋
         </h1>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
           Here's what's happening across your procurement operations today.
         </p>
-      </div>
+      </motion.div>
 
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
+      <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
         {kpis.map((kpi) => {
           const colors = kpiColorMap[kpi.color]
           const Icon = kpi.icon
           return (
-            <div key={kpi.title} className="card card-hover" style={{ display: 'flex', flexDirection: 'column' }}>
+            <motion.div key={kpi.title} whileHover={{ y: -4, scale: 1.01 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }} className="card card-hover" style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
                 <span className="label" style={{ marginBottom: 0 }}>{kpi.title}</span>
                 <div style={{ padding: '8px', borderRadius: '8px', background: colors.bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -221,13 +237,13 @@ export default function DashboardPage() {
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: kpi.isUp ? '#34D399' : '#FB7185' }}>{kpi.change}</span>
                 <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-muted)' }}>{kpi.subtext}</span>
               </div>
-            </div>
+            </motion.div>
           )
         })}
-      </div>
+      </motion.div>
 
       {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
+      <motion.div variants={itemVariants} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', alignItems: 'start' }}>
         
         {/* Activity Feed */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -374,7 +390,7 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
