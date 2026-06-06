@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   ShoppingBag, 
   Search, 
@@ -11,8 +11,11 @@ import {
   CheckCircle2, 
   Clock, 
   XCircle,
-  Truck
+  Truck,
+  Database,
+  Loader2
 } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 interface PurchaseOrder {
   id: string
@@ -55,9 +58,67 @@ const initialPos: PurchaseOrder[] = [
 ]
 
 export default function PurchaseOrdersPage() {
-  const [pos] = useState<PurchaseOrder[]>(initialPos)
+  const supabase = createClient()
+  const [pos, setPos] = useState<PurchaseOrder[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  
+  const [isDbMode, setIsDbMode] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadPurchaseOrders() {
+      try {
+        const { data: dbPos, error } = await supabase
+          .from('purchase_orders')
+          .select(`
+            id,
+            po_number,
+            status,
+            subtotal,
+            tax_amount,
+            total_amount,
+            delivery_date,
+            issued_at,
+            vendor:vendors(company_name),
+            quotation:quotations(quotation_number)
+          `)
+          .order('issued_at', { ascending: false })
+
+        if (error) throw error
+
+        if (dbPos && dbPos.length > 0) {
+          const formatted: PurchaseOrder[] = dbPos.map(item => ({
+            id: item.id,
+            po_number: item.po_number,
+            quotation_ref: (item.quotation as any)?.quotation_number || 'QUO-Manual',
+            vendor_name: (item.vendor as any)?.company_name || 'Unknown Vendor',
+            status: item.status as any,
+            subtotal: Number(item.subtotal),
+            tax_amount: Number(item.tax_amount),
+            total_amount: Number(item.total_amount),
+            delivery_date: item.delivery_date ? item.delivery_date.split('T')[0] : 'N/A',
+            issued_at: item.issued_at ? item.issued_at.split('T')[0] : 'N/A'
+          }))
+          setPos(formatted)
+          setIsDbMode(true)
+        } else {
+          // Fallback to local storage or initial values
+          const localPos = JSON.parse(localStorage.getItem('vb_purchase_orders_mock') || '[]')
+          setPos([...localPos, ...initialPos])
+          setIsDbMode(false)
+        }
+      } catch (err) {
+        console.warn('Using Local Demo Mode for Purchase Orders:', err)
+        const localPos = JSON.parse(localStorage.getItem('vb_purchase_orders_mock') || '[]')
+        setPos([...localPos, ...initialPos])
+        setIsDbMode(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadPurchaseOrders()
+  }, [])
 
   const filteredPos = pos.filter((p) => {
     const matchesSearch = p.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -69,6 +130,18 @@ export default function PurchaseOrdersPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* DB Connection Alert */}
+      {!isDbMode && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-4 flex items-center justify-between text-xs gap-3">
+          <div className="flex items-center gap-2.5">
+            <Database size={18} className="shrink-0 text-amber-400" />
+            <p className="leading-relaxed">
+              <strong>Running in Demo Mode:</strong> Showing local mock purchase orders. Award contracts on the Quotations page or configure your Supabase schema to enable real database PO persistence.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -110,57 +183,71 @@ export default function PurchaseOrdersPage() {
         </div>
       </div>
 
-      {/* PO List */}
-      <div className="grid grid-cols-1 gap-6">
-        {filteredPos.map((po) => (
-          <div key={po.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6">
-            <div className="flex-1 space-y-4">
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-mono">
-                      {po.po_number}
-                    </span>
-                    <span className="text-xs text-slate-400 font-medium">Quote: {po.quotation_ref}</span>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+          <Loader2 size={32} className="text-indigo-600 animate-spin" />
+          <span className="text-xs text-slate-500 font-semibold">Loading purchase orders...</span>
+        </div>
+      ) : filteredPos.length === 0 ? (
+        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
+          <ShoppingBag size={36} className="text-slate-350 mx-auto mb-3" />
+          <h4 className="font-bold text-slate-800 text-sm">No Purchase Orders Found</h4>
+          <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
+            There are no purchase orders matching your search or filters.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6">
+          {filteredPos.map((po) => (
+            <div key={po.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6">
+              <div className="flex-1 space-y-4">
+                {/* Header */}
+                <div className="flex items-start justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-indigo-650 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 font-mono">
+                        {po.po_number}
+                      </span>
+                      <span className="text-xs text-slate-400 font-medium">Quote: {po.quotation_ref}</span>
+                    </div>
+                    <h4 className="font-bold text-slate-800 text-lg leading-tight mt-1.5">{po.vendor_name}</h4>
+                    <p className="text-xs text-slate-500 mt-1">Issued on {po.issued_at}</p>
                   </div>
-                  <h4 className="font-bold text-slate-800 text-lg leading-tight mt-1.5">{po.vendor_name}</h4>
-                  <p className="text-xs text-slate-500 mt-1">Issued on {po.issued_at}</p>
+
+                  {/* Status */}
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
+                    po.status === 'fulfilled' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
+                    po.status === 'issued' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
+                    po.status === 'acknowledged' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
+                    'bg-slate-105 text-slate-600 border border-slate-200'
+                  }`}>
+                    {po.status === 'fulfilled' && <CheckCircle2 size={12} />}
+                    {po.status === 'issued' && <Truck size={12} />}
+                    {po.status === 'acknowledged' && <Clock size={12} />}
+                    <span className="capitalize">{po.status}</span>
+                  </span>
                 </div>
 
-                {/* Status */}
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                  po.status === 'fulfilled' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                  po.status === 'issued' ? 'bg-indigo-50 text-indigo-700 border border-indigo-100' :
-                  po.status === 'acknowledged' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                  'bg-slate-105 text-slate-600 border border-slate-200'
-                }`}>
-                  {po.status === 'fulfilled' && <CheckCircle2 size={12} />}
-                  {po.status === 'issued' && <Truck size={12} />}
-                  {po.status === 'acknowledged' && <Clock size={12} />}
-                  <span className="capitalize">{po.status}</span>
-                </span>
+                {/* Info footer */}
+                <div className="flex flex-wrap gap-6 text-xs text-slate-500 pt-2 border-t border-slate-50">
+                  <span className="flex items-center gap-1.5"><Calendar size={14} /> Expected Delivery: <span className="font-semibold text-slate-700">{po.delivery_date}</span></span>
+                  <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-semibold text-slate-750">₹{po.total_amount.toLocaleString('en-IN')}</span></span>
+                </div>
               </div>
 
-              {/* Info footer */}
-              <div className="flex flex-wrap gap-6 text-xs text-slate-500 pt-2 border-t border-slate-50">
-                <span className="flex items-center gap-1.5"><Calendar size={14} /> Expected Delivery: <span className="font-semibold text-slate-700">{po.delivery_date}</span></span>
-                <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-semibold text-slate-750">₹{po.total_amount.toLocaleString('en-IN')}</span></span>
+              {/* Action buttons */}
+              <div className="md:w-32 flex md:flex-col justify-end md:justify-center gap-2 md:border-l border-slate-100 pl-0 md:pl-6 pt-4 md:pt-0">
+                <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-indigo-650 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer">
+                  View
+                </button>
+                <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer">
+                  <Download size={14} /> PDF
+                </button>
               </div>
             </div>
-
-            {/* Action buttons */}
-            <div className="md:w-32 flex md:flex-col justify-end md:justify-center gap-2 md:border-l border-slate-100 pl-0 md:pl-6 pt-4 md:pt-0">
-              <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-indigo-650 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors cursor-pointer">
-                View
-              </button>
-              <button className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer">
-                <Download size={14} /> PDF
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

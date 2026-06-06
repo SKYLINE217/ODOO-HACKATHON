@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Activity, 
   Search, 
@@ -9,8 +9,11 @@ import {
   Terminal, 
   FileText, 
   CheckCircle2, 
-  AlertTriangle 
+  AlertTriangle,
+  Database,
+  Loader2
 } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
 
 interface ActivityLog {
   id: string
@@ -67,8 +70,59 @@ const mockLogs: ActivityLog[] = [
 ]
 
 export default function ActivityLogPage() {
-  const [logs] = useState<ActivityLog[]>(mockLogs)
+  const supabase = createClient()
+  const [logs, setLogs] = useState<ActivityLog[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  
+  const [isDbMode, setIsDbMode] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function loadLogs() {
+      try {
+        const { data: dbLogs, error } = await supabase
+          .from('activity_logs')
+          .select(`
+            id,
+            entity_type,
+            entity_id,
+            action,
+            description,
+            performed_at,
+            ip_address,
+            performed_by_profile:profiles!activity_logs_performed_by_fkey(full_name)
+          `)
+          .order('performed_at', { ascending: false })
+
+        if (error) throw error
+
+        if (dbLogs && dbLogs.length > 0) {
+          const formatted: ActivityLog[] = dbLogs.map(item => ({
+            id: item.id,
+            entity_type: item.entity_type,
+            entity_id: item.entity_id,
+            action: item.action,
+            description: item.description,
+            performed_by: (item.performed_by_profile as any)?.full_name || 'System Operator',
+            performed_at: item.performed_at ? item.performed_at.replace('T', ' ').substring(0, 19) : 'N/A',
+            ip_address: item.ip_address || '127.0.0.1'
+          }))
+          setLogs(formatted)
+          setIsDbMode(true)
+        } else {
+          setLogs(mockLogs)
+          setIsDbMode(false)
+        }
+      } catch (err) {
+        console.warn('Using Local Demo Mode for Activity Audit Logs:', err)
+        setLogs(mockLogs)
+        setIsDbMode(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadLogs()
+  }, [])
 
   const filteredLogs = logs.filter(log => 
     log.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -78,6 +132,18 @@ export default function ActivityLogPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      {/* DB Connection Alert */}
+      {!isDbMode && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-4 flex items-center justify-between text-xs gap-3">
+          <div className="flex items-center gap-2.5">
+            <Database size={18} className="shrink-0 text-amber-400" />
+            <p className="leading-relaxed">
+              <strong>Running in Demo Mode:</strong> Showing system mock event logs. Run the <code>schema.sql</code> script on Supabase to connect PostgreSQL and stream real audit events.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Audit & Activity Logs</h2>
@@ -106,7 +172,12 @@ export default function ActivityLogPage() {
         </div>
         
         <div className="divide-y divide-slate-100">
-          {filteredLogs.length > 0 ? (
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3">
+              <Loader2 size={32} className="text-indigo-600 animate-spin" />
+              <span className="text-xs text-slate-500 font-semibold">Loading audit logs...</span>
+            </div>
+          ) : filteredLogs.length > 0 ? (
             filteredLogs.map((log) => (
               <div key={log.id} className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex gap-4 items-start">
