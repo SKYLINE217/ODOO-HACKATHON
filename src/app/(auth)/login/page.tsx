@@ -51,22 +51,17 @@ const DEMO_ACCOUNTS: Record<string, object> = {
 
 const VALID_PASSWORDS = ['admin', 'password', 'admin@123', 'password123', 'pass123', 'Admin@123']
 
-// ── Set session via API route (cookie set server-side, then redirect) ────────
+// ── Hardcoded session setter ───────────────────────────────────────────
 async function setBypassSession(profile: object): Promise<void> {
-  try {
-    await fetch('/api/auth/set-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(profile),
-      credentials: 'same-origin',
-      redirect: 'follow',
-    })
-    window.location.href = '/'
-  } catch {
-    // Fallback: client-side cookie
-    document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; SameSite=Lax`
-    window.location.href = '/'
-  }
+  const sessionStr = JSON.stringify(profile);
+  
+  // 1. Set localStorage (100% reliable client-side)
+  localStorage.setItem('vb_session', sessionStr);
+  
+  // 2. Set Cookie as fallback
+  document.cookie = `sb-bypass-session=${encodeURIComponent(sessionStr)}; path=/; max-age=86400; SameSite=Lax`;
+  
+  window.location.href = '/';
 }
 
 export default function LoginPage() {

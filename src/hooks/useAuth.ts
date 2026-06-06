@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useAuthStore, UserProfile } from '@/stores/useAuthStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 export function useAuth() {
   const { user, setUser, loading, setLoading, logout } = useAuthStore()
@@ -9,17 +9,31 @@ export function useAuth() {
     if (initialized.current) return
     initialized.current = true
 
-    // ── ONLY Read bypass cookie ─────────────────────────────
-    function readBypassCookie(): boolean {
+    function readSession() {
       if (typeof window === 'undefined') return false
-      const bypassCookie = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('sb-bypass-session='))
-      if (!bypassCookie) return false
+
+      let decoded = null
+
+      // 1. Try localStorage first (bulletproof)
       try {
-        const raw = bypassCookie.split('=').slice(1).join('=')
-        const decoded = JSON.parse(decodeURIComponent(raw))
-        if (!decoded?.id) return false
+        const local = localStorage.getItem('vb_session')
+        if (local) decoded = JSON.parse(local)
+      } catch {}
+
+      // 2. Try cookie fallback
+      if (!decoded) {
+        const bypassCookie = document.cookie
+          .split('; ')
+          .find(row => row.startsWith('sb-bypass-session='))
+        if (bypassCookie) {
+          try {
+            const raw = bypassCookie.split('=').slice(1).join('=')
+            decoded = JSON.parse(decodeURIComponent(raw))
+          } catch {}
+        }
+      }
+
+      if (decoded?.id) {
         setUser({
           id: decoded.id,
           full_name: decoded.full_name || 'Demo User',
@@ -32,13 +46,12 @@ export function useAuth() {
         })
         setLoading(false)
         return true
-      } catch {
-        document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-        return false
       }
+
+      return false
     }
 
-    if (!readBypassCookie()) {
+    if (!readSession()) {
       setUser(null)
       setLoading(false)
     }
