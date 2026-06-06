@@ -4,7 +4,40 @@ import { INITIAL_SEEDS } from './seeds';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-const realSupabase = createSupabaseClient(supabaseUrl, supabaseKey);
+const isConfigured = 
+  supabaseUrl.startsWith('http') && 
+  supabaseKey.length > 0 && 
+  supabaseKey.includes('.');
+
+let realSupabase: any;
+if (isConfigured) {
+  try {
+    realSupabase = createSupabaseClient(supabaseUrl, supabaseKey);
+  } catch (err) {
+    console.warn('Failed to initialize real Supabase client:', err);
+  }
+}
+
+if (!realSupabase) {
+  realSupabase = {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      getUser: async () => ({ data: { user: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signInWithPassword: async () => ({ data: { user: null, session: null }, error: new Error('Supabase is not configured') }),
+      signUp: async () => ({ data: { user: null, session: null }, error: new Error('Supabase is not configured') }),
+      signOut: async () => ({ error: null }),
+      signInWithOAuth: async () => ({ error: new Error('Supabase is not configured') }),
+      exchangeCodeForSession: async () => ({ data: { session: null }, error: new Error('Supabase is not configured') }),
+      updateUser: async () => ({ data: { user: null }, error: new Error('Supabase is not configured') }),
+    },
+    from: (tableName: string) => {
+      return {
+        select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: new Error('Supabase is not configured') }) }) })
+      };
+    }
+  };
+}
 
 function getLocalTable(tableName: string): any[] {
   if (typeof window === 'undefined') return [];
@@ -46,6 +79,7 @@ function runLocalQuery(tableName: string, chain: Array<{ method: string; args: a
   let operation: 'select' | 'insert' | 'update' | 'upsert' | 'delete' = 'select';
   const eqFilters: { column: string; value: any }[] = [];
   const neqFilters: { column: string; value: any }[] = [];
+  const inFilters: { column: string; values: any[] }[] = [];
   let orderBy: { column: string; ascending: boolean } | null = null;
   let limitVal: number | null = null;
   let single = false;
@@ -60,6 +94,8 @@ function runLocalQuery(tableName: string, chain: Array<{ method: string; args: a
       eqFilters.push({ column: call.args[0], value: call.args[1] });
     } else if (call.method === 'neq') {
       neqFilters.push({ column: call.args[0], value: call.args[1] });
+    } else if (call.method === 'in') {
+      inFilters.push({ column: call.args[0], values: Array.isArray(call.args[1]) ? call.args[1] : [] });
     } else if (call.method === 'order') {
       orderBy = { column: call.args[0], ascending: call.args[1]?.ascending !== false };
     } else if (call.method === 'limit') {
@@ -86,6 +122,9 @@ function runLocalQuery(tableName: string, chain: Array<{ method: string; args: a
     }
     for (const f of neqFilters) {
       if (row[f.column] === f.value) return false;
+    }
+    for (const f of inFilters) {
+      if (!f.values.includes(row[f.column])) return false;
     }
     return true;
   };
@@ -242,6 +281,7 @@ class MockSupabaseQueryBuilder {
   select(...args: any[]) { this.chain.push({ method: 'select', args }); return this; }
   eq(...args: any[]) { this.chain.push({ method: 'eq', args }); return this; }
   neq(...args: any[]) { this.chain.push({ method: 'neq', args }); return this; }
+  in(...args: any[]) { this.chain.push({ method: 'in', args }); return this; }
   order(...args: any[]) { this.chain.push({ method: 'order', args }); return this; }
   limit(...args: any[]) { this.chain.push({ method: 'limit', args }); return this; }
   single(...args: any[]) { this.chain.push({ method: 'single', args }); return this; }
@@ -252,6 +292,9 @@ class MockSupabaseQueryBuilder {
 
   async then(onfulfilled?: (value: any) => any, onrejected?: (reason: any) => any) {
     try {
+      if (!isConfigured) {
+        throw new Error('Supabase is not configured');
+      }
       // 1. Run query on real Supabase database
       let sbQuery = realSupabase.from(this.tableName) as any;
       let isMutation = false;

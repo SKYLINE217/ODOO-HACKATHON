@@ -10,6 +10,18 @@ const ROLE_ROUTES: Record<string, string[]> = {
   '/activity': ['admin', 'procurement_officer', 'manager'],
 }
 
+function decodeJwt(token: string) {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    const decoded = atob(payload);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
   const pathname = request.nextUrl.pathname
@@ -26,12 +38,44 @@ export async function proxy(request: NextRequest) {
   try {
     // Check for bypass session cookie
     const bypassCookie = request.cookies.get('sb-bypass-session')?.value
-    let localUser: { role?: string } | null = null
+    let localUser: { role?: string; id?: string } | null = null
     if (bypassCookie) {
       try {
         localUser = JSON.parse(decodeURIComponent(bypassCookie))
       } catch {
         // Malformed — ignore
+      }
+    } else {
+      // Look for real Supabase session cookies
+      let token: string | undefined;
+      for (const cookie of request.cookies.getAll()) {
+        if (cookie.name === 'sb-access-token') {
+          token = cookie.value;
+          break;
+        }
+        if (cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')) {
+          try {
+            const parsed = JSON.parse(decodeURIComponent(cookie.value));
+            if (Array.isArray(parsed) && parsed[0]) {
+              token = parsed[0];
+            } else if (parsed && parsed.access_token) {
+              token = parsed.access_token;
+            }
+          } catch {
+            token = cookie.value;
+          }
+          break;
+        }
+      }
+
+      if (token) {
+        const decoded = decodeJwt(token);
+        if (decoded && decoded.exp * 1000 > Date.now()) {
+          localUser = {
+            id: decoded.sub,
+            role: decoded.user_metadata?.role || decoded.app_metadata?.role || 'procurement_officer',
+          };
+        }
       }
     }
 

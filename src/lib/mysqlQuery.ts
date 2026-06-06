@@ -13,6 +13,7 @@ export async function handleDbQuery(table: string, chain: ChainCall[]) {
   let selectColumns = '*';
   const eqFilters: { column: string; value: any }[] = [];
   const neqFilters: { column: string; value: any }[] = [];
+  const inFilters: { column: string; values: any[] }[] = [];
   let orderBy: { column: string; ascending: boolean } | null = null;
   let limit: number | null = null;
   let single = false;
@@ -28,6 +29,8 @@ export async function handleDbQuery(table: string, chain: ChainCall[]) {
       eqFilters.push({ column: call.args[0], value: call.args[1] });
     } else if (call.method === 'neq') {
       neqFilters.push({ column: call.args[0], value: call.args[1] });
+    } else if (call.method === 'in') {
+      inFilters.push({ column: call.args[0], values: Array.isArray(call.args[1]) ? call.args[1] : [] });
     } else if (call.method === 'order') {
       const col = call.args[0];
       const opts = call.args[1] || {};
@@ -63,6 +66,16 @@ export async function handleDbQuery(table: string, chain: ChainCall[]) {
     for (const filter of neqFilters) {
       conditions.push(`${tableAlias}.\`${filter.column}\` != ?`);
       params.push(filter.value);
+    }
+
+    for (const filter of inFilters) {
+      if (filter.values.length > 0) {
+        const placeholders = filter.values.map(() => '?').join(',');
+        conditions.push(`${tableAlias}.\`${filter.column}\` IN (${placeholders})`);
+        params.push(...filter.values);
+      } else {
+        conditions.push('1 = 0');
+      }
     }
 
     const sql = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

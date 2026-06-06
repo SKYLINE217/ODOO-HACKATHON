@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react'
+import { Building2, Mail, Lock, ArrowRight, Zap, Shield, Briefcase, Store } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
@@ -46,8 +46,78 @@ export default function LoginPage() {
     setLoading(true)
     setErrorText(null)
 
+    const lowerEmail = email.toLowerCase().trim()
+
+    // 1. Check for default hardcoded demo/seed accounts first
+    const isSeedEmail = lowerEmail.includes('admin') || lowerEmail.includes('manager') || lowerEmail.includes('procurement') || lowerEmail.includes('vendor') || lowerEmail.includes('lead')
+    const isValidSeedPassword = ['admin', 'password', 'admin@123', 'password123', 'pass123', 'Admin@123'].includes(password)
+
+    if (isSeedEmail && isValidSeedPassword) {
+      let profile: any = null
+
+      if (lowerEmail.includes('admin')) {
+        profile = {
+          id: '00000000-0000-0000-0000-000000000001',
+          full_name: 'Alex Mercer (Admin)',
+          email: 'admin@vendorbridge.io',
+          role: 'admin',
+          department: 'Executive Office',
+          avatar_url: null,
+          phone: '+1 555-0199',
+          onboarded: true
+        }
+      } else if (lowerEmail.includes('manager')) {
+        profile = {
+          id: '00000000-0000-0000-0000-000000000002',
+          full_name: 'Sarah Connor (Manager)',
+          email: 'manager@vendorbridge.io',
+          role: 'manager',
+          department: 'Operations & IT',
+          avatar_url: null,
+          phone: '+1 555-0200',
+          onboarded: true
+        }
+      } else if (lowerEmail.includes('procurement')) {
+        profile = {
+          id: '00000000-0000-0000-0000-000000000003',
+          full_name: 'Raj Kumar (Procurement)',
+          email: 'procurement@vendorbridge.io',
+          role: 'procurement_officer',
+          department: 'Procurement & Supply',
+          avatar_url: null,
+          phone: '+1 555-0201',
+          onboarded: true
+        }
+      } else if (lowerEmail.includes('vendor')) {
+        profile = {
+          id: '00000000-0000-0000-0000-000000000004',
+          full_name: 'Apex Vendor Rep',
+          email: 'vendor@vendorbridge.io',
+          role: 'vendor',
+          department: 'Sales',
+          avatar_url: null,
+          phone: '+1 555-0202',
+          vendor_id: 'vid-apex',
+          onboarded: true
+        }
+      }
+
+      if (profile) {
+        // Clear real Supabase session cookies if they exist to avoid conflicts
+        const cookiesToClear = ['sb-access-token', 'sb-refresh-token']
+        cookiesToClear.forEach(name => {
+          document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+        })
+        document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
+        router.replace('/')
+        router.refresh()
+        setLoading(false)
+        return
+      }
+    }
+
     try {
-      // 1. Attempt login with Supabase
+      // 2. Attempt login with Supabase (for newly registered custom accounts)
       try {
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -60,9 +130,7 @@ export default function LoginPage() {
 
         if (data?.user) {
           // Clear bypass cookie
-          if (typeof window !== 'undefined') {
-            document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-          }
+          document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           router.replace('/')
           router.refresh()
           return
@@ -70,9 +138,7 @@ export default function LoginPage() {
       } catch (authErr: any) {
         console.warn('Supabase login failed, checking fallback registry:', authErr.message)
 
-        const lowerEmail = email.toLowerCase()
-
-        // 2. Check local registry bypass fallback (e.g. for pending email confirmations)
+        // 3. Check local registry bypass fallback (e.g. for pending email confirmations or local signups)
         const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
         const localUser = usersRegistry[lowerEmail]
 
@@ -88,46 +154,7 @@ export default function LoginPage() {
             onboarded: localUser.onboarded ?? false
           }
 
-          document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; path=/`
-          router.replace('/')
-          router.refresh()
-          return
-        }
-
-        // 3. Fall back to default seed accounts if password matches
-        const isSeedEmail = lowerEmail.includes('admin') || lowerEmail.includes('manager') || lowerEmail.includes('procurement') || lowerEmail.includes('vendor') || lowerEmail.includes('lead')
-        const isValidSeedPassword = ['admin', 'password', 'admin@123', 'password123', 'pass123'].includes(password.toLowerCase())
-
-        if (isSeedEmail && isValidSeedPassword) {
-          let role: 'admin' | 'manager' | 'procurement_officer' | 'vendor' = 'procurement_officer'
-          let name = 'Procurement Officer'
-          let vendorId = null
-
-          if (lowerEmail.includes('admin')) {
-            role = 'admin'
-            name = 'System Administrator'
-          } else if (lowerEmail.includes('manager')) {
-            role = 'manager'
-            name = 'Procurement Manager'
-          } else if (lowerEmail.includes('vendor')) {
-            role = 'vendor'
-            name = 'Apex Tech Support'
-            vendorId = 'vid-apex' // Default seeded vendor
-          }
-
-          const profile = {
-            id: 'mock-' + role + '-id',
-            full_name: name,
-            email: email,
-            role: role,
-            avatar_url: null,
-            department: role === 'vendor' ? null : 'Procurement',
-            phone: '+1 555-0199',
-            vendor_id: vendorId,
-            onboarded: true
-          }
-
-          document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; path=/`
+          document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
           router.replace('/')
           router.refresh()
           return
@@ -138,8 +165,8 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       setErrorText(
-        err.message?.includes('Invalid login') 
-          ? 'Incorrect email or password.' 
+        err.message?.includes('Invalid login')
+          ? 'Incorrect email or password.'
           : err.message?.includes('Email not confirmed')
           ? 'Email confirmation pending. Local bypass credentials not found.'
           : (err.message || 'Sign-in failed. Check your credentials.')
@@ -170,13 +197,13 @@ export default function LoginPage() {
           VendorBridge
         </h2>
         <p className="text-xs font-mono text-[var(--text-secondary)] uppercase tracking-wider mt-1">
-          High-Speed Procurement & Bidding Portal
+          High-Speed Procurement &amp; Bidding Portal
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-[var(--bg-surface)] border-t-[5px] border-t-[var(--accent)] border border-[var(--border-default)] py-8 px-4 shadow-xl rounded-xl sm:px-10 relative">
-          
+
           {/* Subtle Speed corner stripes */}
           <div className="absolute top-0 right-0 w-8 h-8 overflow-hidden pointer-events-none">
             <div className="absolute top-[-10px] right-[-10px] w-6 h-6 bg-[var(--accent)] rotate-45" />
@@ -294,7 +321,7 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center border-t border-[var(--border-default)] pt-4">
             <span className="text-xs text-[var(--text-secondary)]">
-              Don't have a portal account?{' '}
+              Don&apos;t have a portal account?{' '}
               <Link href="/signup" className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-bold transition-colors font-mono">
                 SIGN UP
               </Link>
@@ -305,35 +332,35 @@ export default function LoginPage() {
           <div className="mt-6 pt-5 border-t border-[var(--border-default)]">
             <div className="flex flex-col items-center justify-center mb-3">
               <p className="text-[10px] font-bold text-[var(--text-secondary)] uppercase tracking-widest font-mono">Active Constructor Teams</p>
-              <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">Autofill credentials</p>
+              <p className="text-[9px] text-[var(--text-muted)] mt-0.5 font-mono">Click to autofill credentials, then Sign In</p>
             </div>
             <div className="grid grid-cols-2 gap-2.5">
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setEmail('admin@vendorbridge.io'); setPassword('Admin@123'); }}
                 className="py-2 px-2.5 bg-[var(--bg-subtle)] border-l-4 border-l-[#1E41FF] border border-[var(--border-default)] hover:border-[#1E41FF] rounded text-left flex flex-col gap-0.5 transition-all cursor-pointer hover:bg-[var(--bg-surface)]"
               >
                 <span className="text-xs font-bold text-[#1E41FF] font-display uppercase tracking-wider">Red Bull Racing</span>
                 <span className="text-[10px] font-mono text-[var(--text-primary)]">Admin principal</span>
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setEmail('manager@vendorbridge.io'); setPassword('Admin@123'); }}
                 className="py-2 px-2.5 bg-[var(--bg-subtle)] border-l-4 border-l-[#E10600] border border-[var(--border-default)] hover:border-[#E10600] rounded text-left flex flex-col gap-0.5 transition-all cursor-pointer hover:bg-[var(--bg-surface)]"
               >
                 <span className="text-xs font-bold text-[#E10600] font-display uppercase tracking-wider">Scuderia Ferrari</span>
                 <span className="text-[10px] font-mono text-[var(--text-primary)]">Manager approval</span>
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setEmail('procurement@vendorbridge.io'); setPassword('Admin@123'); }}
                 className="py-2 px-2.5 bg-[var(--bg-subtle)] border-l-4 border-l-[#00A398] border border-[var(--border-default)] hover:border-[#00A398] rounded text-left flex flex-col gap-0.5 transition-all cursor-pointer hover:bg-[var(--bg-surface)]"
               >
                 <span className="text-xs font-bold text-[#00A398] font-display uppercase tracking-wider">Mercedes-AMG</span>
                 <span className="text-[10px] font-mono text-[var(--text-primary)]">Procurement lead</span>
               </button>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => { setEmail('vendor@vendorbridge.io'); setPassword('Admin@123'); }}
                 className="py-2 px-2.5 bg-[var(--bg-subtle)] border-l-4 border-l-[#FF8000] border border-[var(--border-default)] hover:border-[#FF8000] rounded text-left flex flex-col gap-0.5 transition-all cursor-pointer hover:bg-[var(--bg-surface)]"
               >
@@ -349,4 +376,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
