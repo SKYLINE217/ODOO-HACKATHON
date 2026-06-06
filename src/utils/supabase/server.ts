@@ -1,9 +1,5 @@
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { handleDbQuery } from "@/lib/mysqlQuery";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gbfjkjtcjtbuwdvsscpy.supabase.co";
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_e4hPTz57aT4LfWyAwpAwQg_b5WrNSX8";
 
 class MockSupabaseQueryBuilder {
   private tableName: string;
@@ -18,7 +14,7 @@ class MockSupabaseQueryBuilder {
   neq(...args: any[]) { this.chain.push({ method: 'neq', args }); return this; }
   order(...args: any[]) { this.chain.push({ method: 'order', args }); return this; }
   limit(...args: any[]) { this.chain.push({ method: 'limit', args }); return this; }
-  single(...args: any[]) { this.chain.push({ method: 'single', args }); return this; return this; }
+  single(...args: any[]) { this.chain.push({ method: 'single', args }); return this; }
   insert(...args: any[]) { this.chain.push({ method: 'insert', args }); return this; }
   update(...args: any[]) { this.chain.push({ method: 'update', args }); return this; }
   upsert(...args: any[]) { this.chain.push({ method: 'upsert', args }); return this; }
@@ -37,34 +33,80 @@ class MockSupabaseQueryBuilder {
   }
 }
 
-export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>): any => {
-  const realClient = createServerClient(
-    supabaseUrl,
-    supabaseKey,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll()
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
-      },
-    },
-  );
-
-  return new Proxy(realClient, {
-    get(target, prop, receiver) {
-      if (prop === 'from') {
-        return (tableName: string) => new MockSupabaseQueryBuilder(tableName);
-      }
-      return Reflect.get(target, prop, receiver);
+function profileToSupabaseUser(profile: any) {
+  if (!profile) return null;
+  return {
+    id: profile.id,
+    email: profile.email,
+    user_metadata: {
+      full_name: profile.full_name,
+      role: profile.role,
+      avatar_url: profile.avatar_url,
+      department: profile.department
     }
-  }) as any;
+  };
+}
+
+export const createClient = (cookieStore: Awaited<ReturnType<typeof cookies>>): any => {
+  const auth = {
+    async signInWithPassword({ email, password }: any) {
+      return { error: { message: 'Not supported on server component context directly.' } };
+    },
+
+    async signUp() {
+      return { error: { message: 'Not supported on server component context directly.' } };
+    },
+
+    async signOut() {
+      cookieStore.delete('sb-bypass-session');
+      return { error: null };
+    },
+
+    async getSession() {
+      const cookie = cookieStore.get('sb-bypass-session');
+      if (cookie?.value) {
+        try {
+          const userProfile = JSON.parse(cookie.value);
+          const user = profileToSupabaseUser(userProfile);
+          return { data: { session: { access_token: 'mock', user } }, error: null };
+        } catch {}
+      }
+      return { data: { session: null }, error: null };
+    },
+
+    async getUser() {
+      const cookie = cookieStore.get('sb-bypass-session');
+      if (cookie?.value) {
+        try {
+          const userProfile = JSON.parse(cookie.value);
+          const user = profileToSupabaseUser(userProfile);
+          return { data: { user }, error: null };
+        } catch {}
+      }
+      return { data: { user: null }, error: null };
+    },
+
+    onAuthStateChange() {
+      return { data: { subscription: { unsubscribe() {} } } };
+    },
+
+    async signInWithOAuth() {
+      return { error: null };
+    },
+
+    async updateUser() {
+      return { error: null };
+    },
+
+    async exchangeCodeForSession(code: string) {
+      return { data: { session: null }, error: { message: 'OAuth disabled' } };
+    }
+  };
+
+  return {
+    auth,
+    from(tableName: string) {
+      return new MockSupabaseQueryBuilder(tableName);
+    }
+  };
 };

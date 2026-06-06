@@ -1,4 +1,3 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 const PUBLIC_ROUTES = ['/login', '/signup', '/forgot-password', '/auth/callback']
@@ -13,28 +12,6 @@ const ROLE_ROUTES: Record<string, string[]> = {
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
-
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gbfjkjtcjtbuwdvsscpy.supabase.co',
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || '',
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            request.cookies.set(name, value)
-          })
-          response = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
   const pathname = request.nextUrl.pathname
 
   // Skip middleware check for static resources and API calls
@@ -58,9 +35,7 @@ export async function proxy(request: NextRequest) {
       }
     }
 
-    // getUser() verifies the JWT signature server-side (secure)
-    const { data: { user } } = await supabase.auth.getUser()
-    const hasSession = !!user || !!localUser
+    const hasSession = !!localUser
 
     // Redirect unauthenticated users to login
     if (!hasSession && !PUBLIC_ROUTES.some(r => pathname.startsWith(r))) {
@@ -74,28 +49,11 @@ export async function proxy(request: NextRequest) {
     }
 
     // Role-based route protection
-    if (hasSession) {
-      let userRole: string | null = null
-
-      if (localUser?.role) {
-        userRole = localUser.role
-      } else if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single()
-        
-        if (profile) {
-          userRole = profile.role
-        }
-      }
-
-      if (userRole) {
-        for (const [route, allowedRoles] of Object.entries(ROLE_ROUTES)) {
-          if (pathname.startsWith(route) && !allowedRoles.includes(userRole)) {
-            return NextResponse.redirect(new URL('/', request.url))
-          }
+    if (hasSession && localUser?.role) {
+      const userRole = localUser.role
+      for (const [route, allowedRoles] of Object.entries(ROLE_ROUTES)) {
+        if (pathname.startsWith(route) && !allowedRoles.includes(userRole)) {
+          return NextResponse.redirect(new URL('/', request.url))
         }
       }
     }
