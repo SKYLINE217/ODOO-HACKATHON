@@ -16,7 +16,20 @@ async function fetchOrCreateProfile(
     .eq('id', userId)
     .single()
 
-  if (profile && !error) return profile as UserProfile
+  if (profile && !error) {
+    // Replicate profile in background to MySQL to ensure consistency
+    if (typeof window !== 'undefined') {
+      fetch('/api/db', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          table: 'profiles',
+          chain: [{ method: 'upsert', args: [profile] }]
+        })
+      }).catch(err => console.warn('MySQL profile replication failed:', err))
+    }
+    return profile as UserProfile
+  }
 
   // Profile missing — upsert it (Google OAuth trigger may not have fired yet)
   const { data: upserted } = await supabase
@@ -29,6 +42,17 @@ async function fetchOrCreateProfile(
     }, { onConflict: 'id' })
     .select('id, full_name, email, role, avatar_url, department, phone, vendor_id')
     .single()
+
+  if (upserted && typeof window !== 'undefined') {
+    fetch('/api/db', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        table: 'profiles',
+        chain: [{ method: 'upsert', args: [upserted] }]
+      })
+    }).catch(err => console.warn('MySQL upserted profile replication failed:', err))
+  }
 
   return (upserted as UserProfile | null) ?? null
 }
