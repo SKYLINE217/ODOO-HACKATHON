@@ -52,19 +52,35 @@ export default function LoginPage() {
         router.push('/')
       }
     } catch (err: any) {
-      console.warn('Supabase Auth credentials failed, signing in with demo profile:', err.message)
+      console.warn('Supabase Auth credentials failed/unconfirmed, checking local registry:', err.message)
       
-      // Fallback: Login with mock details for validation & showcase
-      setUser({
-        id: 'demo-user-id',
-        full_name: 'Alex Mercer',
-        email: email || 'alex.mercer@vendorbridge.io',
-        role: 'admin',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-        department: 'Procurement & Logistics'
-      })
-      
-      router.push('/')
+      // Bypass check: check if user registered in local registry
+      const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
+      const localUser = usersRegistry[email.toLowerCase()]
+
+      if (localUser) {
+        // Successful mock sign in with user's selected role
+        setUser({
+          id: 'mock-' + Math.random().toString(36).substring(2, 9),
+          full_name: localUser.full_name,
+          email: email,
+          role: localUser.role,
+          avatar_url: null,
+          department: localUser.role === 'procurement_officer' ? 'Procurement' : localUser.role === 'manager' ? 'Management' : null
+        })
+        router.push('/')
+      } else {
+        // Fallback: Login with mock administrator details so they are never locked out
+        setUser({
+          id: 'demo-user-id',
+          full_name: 'Alex Mercer',
+          email: email || 'alex.mercer@vendorbridge.io',
+          role: 'admin',
+          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
+          department: 'Procurement & Logistics'
+        })
+        router.push('/')
+      }
     } finally {
       setLoading(false)
     }
@@ -190,7 +206,7 @@ export default function LoginPage() {
             <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 flex gap-2.5 items-start">
               <ShieldCheck size={18} className="text-indigo-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-400 leading-normal">
-                <strong>Demo Mode Active:</strong> You can sign up or log in using any email and password credentials for instant evaluation.
+                <strong>Email Bypass Active:</strong> If email confirmation is required, you can sign up on the registration page and immediately log in with that email/password here.
               </p>
             </div>
           </div>

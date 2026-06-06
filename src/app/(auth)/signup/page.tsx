@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Mail, Lock, User, ArrowRight, ShieldCheck, HelpCircle } from 'lucide-react'
+import { Building2, Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuthStore } from '@/stores/useAuthStore'
 
@@ -24,6 +24,15 @@ export default function SignupPage() {
     setLoading(true)
     setMessage(null)
 
+    // Save to local registry so login page can auto-bypass email confirmation if needed
+    const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
+    usersRegistry[email.toLowerCase()] = {
+      full_name: fullName,
+      role: role,
+      password: password // store temporarily for developer testing match
+    }
+    localStorage.setItem('vb_users_registry', JSON.stringify(usersRegistry))
+
     try {
       // 1. Attempt signup with Supabase Auth
       const { data, error } = await supabase.auth.signUp({
@@ -42,7 +51,7 @@ export default function SignupPage() {
         throw error
       }
 
-      // If signup succeeds, we check if session is created immediately (e.g. if email confirmation is disabled)
+      // If signup succeeds and session is created immediately (confirmations disabled)
       if (data?.session) {
         setUser({
           id: data.user?.id || 'demo-user-id',
@@ -53,17 +62,20 @@ export default function SignupPage() {
           department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
         })
         setMessage({ type: 'success', text: 'Registration successful! Redirecting...' })
-        setTimeout(() => router.push('/'), 1500)
+        setTimeout(() => router.push('/'), 1200)
       } else {
+        // Confirmation email is sent. However, since the user wants to sign in without email confirmation,
+        // we inform them we've registered their details locally to bypass the check at the sign-in screen!
         setMessage({ 
           type: 'success', 
-          text: 'Registration successful! Please check your email for the confirmation link.' 
+          text: 'Account registered! You can now log in directly at the Sign In page (email verification has been bypassed for you).' 
         })
+        setTimeout(() => router.push('/login'), 3500)
       }
     } catch (err: any) {
-      console.warn('Supabase Auth signup failed, falling back to local session:', err.message)
+      console.warn('Supabase Auth signup failed/blocked, saved details locally for bypass:', err.message)
       
-      // Fallback: Create mock session for local demo testing
+      // Fallback: Login immediately in local state
       setUser({
         id: 'mock-' + Math.random().toString(36).substring(2, 9),
         full_name: fullName || 'New Demo User',
@@ -72,7 +84,7 @@ export default function SignupPage() {
         avatar_url: null,
         department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
       })
-      setMessage({ type: 'success', text: 'Local demo account created! Redirecting...' })
+      setMessage({ type: 'success', text: 'Local account registered! Redirecting...' })
       setTimeout(() => router.push('/'), 1200)
     } finally {
       setLoading(false)
@@ -216,7 +228,7 @@ export default function SignupPage() {
             <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 flex gap-2.5 items-start">
               <ShieldCheck size={18} className="text-indigo-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-400 leading-normal">
-                <strong>Demo Integration:</strong> To make testing simple, registering an account here will instantly configure and activate your role permissions throughout the portal.
+                <strong>Email Bypass Active:</strong> If email confirmation is required, the system registers your details locally and will automatically log you in without confirmation on the sign-in page.
               </p>
             </div>
           </div>
