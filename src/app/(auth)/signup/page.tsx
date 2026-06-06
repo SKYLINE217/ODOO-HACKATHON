@@ -3,68 +3,77 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Mail, Lock, ShieldCheck, ArrowRight } from 'lucide-react'
+import { Building2, Mail, Lock, User, ArrowRight, ShieldCheck, HelpCircle } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuthStore } from '@/stores/useAuthStore'
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter()
   const supabase = createClient()
   const setUser = useAuthStore(state => state.setUser)
+
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState<'admin' | 'procurement_officer' | 'manager' | 'vendor'>('procurement_officer')
   const [loading, setLoading] = useState(false)
-  const [errorText, setErrorText] = useState<string | null>(null)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setErrorText(null)
+    setMessage(null)
 
     try {
-      // 1. Attempt login with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // 1. Attempt signup with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
         email,
-        password
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: role
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
       })
 
       if (error) {
         throw error
       }
 
-      if (data?.user) {
-        // Fetch profile details
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
-
+      // If signup succeeds, we check if session is created immediately (e.g. if email confirmation is disabled)
+      if (data?.session) {
         setUser({
-          id: data.user.id,
-          full_name: profile?.full_name || data.user.user_metadata?.full_name || 'System User',
-          email: data.user.email || email,
-          role: profile?.role || data.user.user_metadata?.role || 'procurement_officer',
-          avatar_url: profile?.avatar_url || null,
-          department: profile?.department || null
+          id: data.user?.id || 'demo-user-id',
+          full_name: fullName,
+          email: email,
+          role: role,
+          avatar_url: null,
+          department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
         })
-
-        router.push('/')
+        setMessage({ type: 'success', text: 'Registration successful! Redirecting...' })
+        setTimeout(() => router.push('/'), 1500)
+      } else {
+        setMessage({ 
+          type: 'success', 
+          text: 'Registration successful! Please check your email for the confirmation link.' 
+        })
       }
     } catch (err: any) {
-      console.warn('Supabase Auth credentials failed, signing in with demo profile:', err.message)
+      console.warn('Supabase Auth signup failed, falling back to local session:', err.message)
       
-      // Fallback: Login with mock details for validation & showcase
+      // Fallback: Create mock session for local demo testing
       setUser({
-        id: 'demo-user-id',
-        full_name: 'Alex Mercer',
-        email: email || 'alex.mercer@vendorbridge.io',
-        role: 'admin',
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-        department: 'Procurement & Logistics'
+        id: 'mock-' + Math.random().toString(36).substring(2, 9),
+        full_name: fullName || 'New Demo User',
+        email: email || 'demo@vendorbridge.io',
+        role: role,
+        avatar_url: null,
+        department: role === 'procurement_officer' ? 'Procurement' : role === 'manager' ? 'Management' : null
       })
-      
-      router.push('/')
+      setMessage({ type: 'success', text: 'Local demo account created! Redirecting...' })
+      setTimeout(() => router.push('/'), 1200)
     } finally {
       setLoading(false)
     }
@@ -83,23 +92,46 @@ export default function LoginPage() {
           </div>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white tracking-tight">
-          Sign in to VendorBridge
+          Create an Account
         </h2>
         <p className="mt-2 text-center text-sm text-slate-400">
-          Secure Procurement & Vendor Portal
+          Join VendorBridge procurement portal
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10">
         <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/80 py-8 px-4 shadow-2xl rounded-2xl sm:px-10">
           
-          {errorText && (
-            <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs font-semibold">
-              {errorText}
+          {message && (
+            <div className={`mb-6 p-4 rounded-xl text-xs font-semibold border ${
+              message.type === 'success' 
+                ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' 
+                : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+            }`}>
+              {message.text}
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleLogin}>
+          <form className="space-y-5" onSubmit={handleSignup}>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Full Name
+              </label>
+              <div className="mt-1.5 relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <User size={16} className="text-slate-500" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Alex Mercer"
+                  className="block w-full pl-10 pr-3 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm transition-all"
+                />
+              </div>
+            </div>
+
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Email Address
@@ -138,25 +170,20 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  defaultChecked
-                  className="h-4 w-4 text-indigo-650 focus:ring-indigo-500 border-slate-800 rounded bg-slate-950"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-xs font-semibold text-slate-400">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-xs font-semibold">
-                <a href="#" className="text-indigo-400 hover:text-indigo-300 transition-colors">
-                  Forgot password?
-                </a>
-              </div>
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Account Role
+              </label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as any)}
+                className="mt-1.5 block w-full px-3 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-sm transition-all cursor-pointer"
+              >
+                <option value="procurement_officer">Procurement Officer</option>
+                <option value="vendor">Vendor Bidding Portal</option>
+                <option value="manager">Manager / Approver</option>
+                <option value="admin">System Admin</option>
+              </select>
             </div>
 
             <div>
@@ -169,7 +196,7 @@ export default function LoginPage() {
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 ) : (
                   <>
-                    Sign In <ArrowRight size={16} />
+                    Sign Up <ArrowRight size={16} />
                   </>
                 )}
               </button>
@@ -178,19 +205,18 @@ export default function LoginPage() {
 
           <div className="mt-6 text-center">
             <span className="text-xs text-slate-400">
-              Don't have an account?{' '}
-              <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-                Sign Up
+              Already have an account?{' '}
+              <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+                Sign In
               </Link>
             </span>
           </div>
 
-          {/* Quick Demo Help */}
           <div className="mt-6 border-t border-slate-800/80 pt-6">
             <div className="bg-slate-950/40 border border-slate-800/60 rounded-xl p-3 flex gap-2.5 items-start">
               <ShieldCheck size={18} className="text-indigo-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-slate-400 leading-normal">
-                <strong>Demo Mode Active:</strong> You can sign up or log in using any email and password credentials for instant evaluation.
+                <strong>Demo Integration:</strong> To make testing simple, registering an account here will instantly configure and activate your role permissions throughout the portal.
               </p>
             </div>
           </div>

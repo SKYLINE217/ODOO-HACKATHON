@@ -13,8 +13,10 @@ import {
   Activity, 
   CheckCircle2, 
   XCircle,
-  FileText
+  FileText,
+  Coins
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
 
 // Mock Data
 const kpis = [
@@ -93,6 +95,8 @@ const recentActivities = [
 
 export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState<'month' | 'quarter'>('month')
+  const { user } = useAuth()
+  const role = user?.role || 'admin'
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -222,34 +226,67 @@ export default function DashboardPage() {
           {/* Quick Actions */}
           <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
             <h3 className="font-bold text-slate-800 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <Link 
-                href="/rfqs"
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 group transition-all text-center"
-              >
-                <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
-                  <FilePlus size={20} />
-                </div>
-                <span className="text-[11px] font-bold text-slate-600 mt-2 block">Create RFQ</span>
-              </Link>
-              <Link 
-                href="/vendors"
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/30 group transition-all text-center"
-              >
-                <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
-                  <UserPlus size={20} />
-                </div>
-                <span className="text-[11px] font-bold text-slate-600 mt-2 block">Add Vendor</span>
-              </Link>
-              <Link 
-                href="/approvals"
-                className="flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 group transition-all text-center"
-              >
-                <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600 group-hover:scale-110 transition-transform">
-                  <CheckSquare size={20} />
-                </div>
-                <span className="text-[11px] font-bold text-slate-600 mt-2 block">Approvals</span>
-              </Link>
+            <div className="flex flex-wrap gap-4 justify-between">
+              {/* Actions for Procurement / Admin */}
+              {(role === 'admin' || role === 'procurement_officer') && (
+                <>
+                  <Link 
+                    href="/rfqs"
+                    className="flex-1 min-w-[80px] flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 group transition-all text-center"
+                  >
+                    <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
+                      <FilePlus size={20} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600 mt-2 block">Create RFQ</span>
+                  </Link>
+                  <Link 
+                    href="/vendors"
+                    className="flex-1 min-w-[80px] flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/30 group transition-all text-center"
+                  >
+                    <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
+                      <UserPlus size={20} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600 mt-2 block">Add Vendor</span>
+                  </Link>
+                </>
+              )}
+
+              {/* Actions for Manager / Admin */}
+              {(role === 'admin' || role === 'manager') && (
+                <Link 
+                  href="/approvals"
+                  className="flex-1 min-w-[80px] flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-amber-100 hover:bg-amber-50/30 group transition-all text-center"
+                >
+                  <div className="p-2.5 bg-amber-50 rounded-lg text-amber-600 group-hover:scale-110 transition-transform">
+                    <CheckSquare size={20} />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-600 mt-2 block">Approvals</span>
+                </Link>
+              )}
+
+              {/* Actions for Vendor */}
+              {role === 'vendor' && (
+                <>
+                  <Link 
+                    href="/rfqs"
+                    className="flex-1 min-w-[80px] flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/30 group transition-all text-center"
+                  >
+                    <div className="p-2.5 bg-indigo-50 rounded-lg text-indigo-600 group-hover:scale-110 transition-transform">
+                      <FileText size={20} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600 mt-2 block">View RFQs</span>
+                  </Link>
+                  <Link 
+                    href="/quotations"
+                    className="flex-1 min-w-[80px] flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-emerald-100 hover:bg-emerald-50/30 group transition-all text-center"
+                  >
+                    <div className="p-2.5 bg-emerald-50 rounded-lg text-emerald-600 group-hover:scale-110 transition-transform">
+                      <Coins size={20} />
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-600 mt-2 block">My Quotes</span>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 

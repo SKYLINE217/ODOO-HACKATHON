@@ -12,27 +12,30 @@ import {
   Receipt, 
   Activity, 
   BarChart3,
-  ShieldAlert,
   LogOut,
   Building2
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/vendors', label: 'Vendors', icon: Users },
-  { href: '/rfqs', label: 'RFQs', icon: FileText },
-  { href: '/quotations', label: 'Quotations', icon: Coins },
-  { href: '/approvals', label: 'Approvals', icon: CheckSquare },
-  { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingBag },
-  { href: '/invoices', label: 'Invoices', icon: Receipt },
-  { href: '/activity', label: 'Activity Log', icon: Activity },
-  { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/', label: 'Dashboard', icon: LayoutDashboard, allowedRoles: ['admin', 'procurement_officer', 'manager', 'vendor'] },
+  { href: '/vendors', label: 'Vendors', icon: Users, allowedRoles: ['admin', 'procurement_officer'] },
+  { href: '/rfqs', label: 'RFQs', icon: FileText, allowedRoles: ['admin', 'procurement_officer', 'manager', 'vendor'] },
+  { href: '/quotations', label: 'Quotations', icon: Coins, allowedRoles: ['admin', 'procurement_officer', 'manager', 'vendor'] },
+  { href: '/approvals', label: 'Approvals', icon: CheckSquare, allowedRoles: ['admin', 'manager'] },
+  { href: '/purchase-orders', label: 'Purchase Orders', icon: ShoppingBag, allowedRoles: ['admin', 'procurement_officer', 'manager', 'vendor'] },
+  { href: '/invoices', label: 'Invoices', icon: Receipt, allowedRoles: ['admin', 'procurement_officer', 'vendor'] },
+  { href: '/activity', label: 'Activity Log', icon: Activity, allowedRoles: ['admin', 'procurement_officer', 'manager'] },
+  { href: '/reports', label: 'Reports', icon: BarChart3, allowedRoles: ['admin', 'procurement_officer', 'manager'] },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
+
+  const userRole = user?.role || 'admin' // default fallback to admin for testing
+
+  const filteredNavItems = navItems.filter((item) => item.allowedRoles.includes(userRole))
 
   return (
     <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col h-screen border-r border-slate-800 shrink-0 sticky top-0">
@@ -51,7 +54,7 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto custom-scrollbar">
-        {navItems.map((item) => {
+        {filteredNavItems.map((item) => {
           const Icon = item.icon
           const isActive = pathname === item.href
           return (

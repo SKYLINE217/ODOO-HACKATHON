@@ -1,20 +1,20 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   Plus, 
   Search, 
   Filter, 
   Star, 
-  MoreVertical, 
   Mail, 
   Phone, 
-  FileText, 
   CheckCircle, 
   AlertTriangle,
   XCircle,
   Building
 } from 'lucide-react'
+import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Vendor {
   id: string
@@ -29,7 +29,7 @@ interface Vendor {
   total_orders: number
 }
 
-const initialVendors: Vendor[] = [
+const fallbackVendors: Vendor[] = [
   {
     id: '1',
     company_name: 'Apex Tech Solutions',
@@ -81,10 +81,14 @@ const initialVendors: Vendor[] = [
 ]
 
 export default function VendorsPage() {
-  const [vendors, setVendors] = useState<Vendor[]>(initialVendors)
+  const supabase = createClient()
+  const { user } = useAuth()
+  
+  const [vendors, setVendors] = useState<Vendor[]>(fallbackVendors)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
+  const [dbNotice, setDbNotice] = useState<string | null>(null)
 
   // Form states
   const [companyName, setCompanyName] = useState('')
@@ -94,12 +98,53 @@ export default function VendorsPage() {
   const [phone, setPhone] = useState('')
   const [gstNumber, setGstNumber] = useState('')
 
-  const handleAddVendor = (e: React.FormEvent) => {
+  // Load vendors from Supabase on mount
+  useEffect(() => {
+    async function loadVendors() {
+      try {
+        const { data, error } = await supabase
+          .from('vendors')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (error) throw error
+        
+        if (data && data.length > 0) {
+          // Map database structure to local interface
+          const mapped: Vendor[] = data.map((v: any) => ({
+            id: v.id,
+            company_name: v.company_name,
+            category: v.notes || 'IT & Software', // using notes or fallback for name
+            status: v.status || 'pending',
+            contact_person: v.contact_person,
+            email: v.email,
+            phone: v.phone,
+            gst_number: v.gst_number || 'N/A',
+            rating: Number(v.rating) || 0,
+            total_orders: v.total_orders || 0
+          }))
+          setVendors(mapped)
+          setDbNotice('Synced with Supabase database')
+        }
+      } catch (err: any) {
+        console.warn('Failed to load vendors from Supabase, using mock local storage:', err.message)
+        // Check localStorage
+        const stored = localStorage.getItem('vb_vendors')
+        if (stored) {
+          setVendors(JSON.parse(stored))
+        }
+      }
+    }
+
+    loadVendors()
+  }, [supabase])
+
+  const handleAddVendor = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyName || !contactPerson || !email) return
 
     const newVendor: Vendor = {
-      id: String(vendors.length + 1),
+      id: Math.random().toString(36).substring(2, 9),
       company_name: companyName,
       category,
       status: 'pending',
@@ -111,7 +156,33 @@ export default function VendorsPage() {
       total_orders: 0
     }
 
-    setVendors([newVendor, ...vendors])
+    try {
+      // Try to save to Supabase
+      const { error } = await supabase
+        .from('vendors')
+        .insert({
+          company_name: companyName,
+          status: 'pending',
+          contact_person: contactPerson,
+          email,
+          phone,
+          gst_number: gstNumber || null,
+          notes: category, // store category string in notes for simple mapping
+          created_by: user?.id || 'demo-user-id'
+        })
+
+      if (error) throw error
+
+      setDbNotice('Vendor saved to Supabase!')
+    } catch (err: any) {
+      console.warn('Could not save vendor to Supabase, saving to local session storage:', err.message)
+    }
+
+    // Always update local UI state
+    const updated = [newVendor, ...vendors]
+    setVendors(updated)
+    localStorage.setItem('vb_vendors', JSON.stringify(updated))
+
     setShowAddForm(false)
     // Reset form fields
     setCompanyName('')
@@ -130,20 +201,29 @@ export default function VendorsPage() {
   })
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div className="space-y-8 animate-in fade-in duration-300 font-sans">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Vendor Management</h2>
           <p className="text-slate-500 text-sm mt-1">Register, monitor compliance, and track performance of all vendors.</p>
+          {dbNotice && (
+            <span className="inline-flex mt-2 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100">
+              {dbNotice}
+            </span>
+          )}
         </div>
-        <button
-          onClick={() => setShowAddForm(true)}
-          className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-indigo-600/10 transition-all cursor-pointer self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          Register Vendor
-        </button>
+        
+        {/* Authorization check: only Admin/Procurement Officer can register vendors */}
+        {(user?.role === 'admin' || user?.role === 'procurement_officer') && (
+          <button
+            onClick={() => setShowAddForm(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-indigo-600/10 transition-all cursor-pointer self-start sm:self-auto"
+          >
+            <Plus size={16} />
+            Register Vendor
+          </button>
+        )}
       </div>
 
       {/* Filter and Search Bar */}
