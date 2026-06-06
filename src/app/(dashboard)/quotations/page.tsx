@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -102,8 +102,9 @@ const mockRfqDetail: RFQDetail = {
   ]
 }
 
+const supabase = createClient()
+
 export default function QuotationsPage() {
-  const supabase = createClient()
   const user = useAuthStore(state => state.user)
 
   const [rfqList, setRfqList] = useState<Array<{ id: string; rfq_number: string; title: string }>>([])
@@ -137,7 +138,6 @@ export default function QuotationsPage() {
           setIsDbMode(false)
         }
       } catch (err) {
-        console.warn('Using Local Demo Mode for Quotations Comparison:', err)
         setRfqList([{ id: 'mock', rfq_number: 'RFQ-2026-00042', title: 'Server Hardware Upgrade (Demo)' }])
         setSelectedRfqId('mock')
         setIsDbMode(false)
@@ -262,7 +262,6 @@ export default function QuotationsPage() {
         const awarded = finalQuotations.find(q => q.status === 'awarded')
         setAwardedVendor(awarded ? awarded.vendor_name : null)
       } catch (err) {
-        console.error('Error fetching details from Supabase:', err)
       } finally {
         setLoading(false)
       }
@@ -393,7 +392,6 @@ export default function QuotationsPage() {
         localStorage.setItem('vb_purchase_orders_mock', JSON.stringify([newMockPo, ...currentPos]))
       }
     } catch (err) {
-      console.error('Error awarding contract:', err)
       alert('Failed to award contract. Please check database logs.')
     } finally {
       setActionLoading(false)
@@ -466,7 +464,7 @@ export default function QuotationsPage() {
             <div className="flex gap-6 text-xs bg-white/10 backdrop-blur border border-white/10 rounded-lg p-3">
               <div>
                 <span className="text-indigo-200 block font-semibold uppercase tracking-wider text-[10px]">Lowest Bid</span>
-                <span className="text-emerald-400 font-extrabold text-sm block mt-0.5">₹{getLowestTotal().toLocaleString('en-IN')}</span>
+                <span className="text-emerald-400 font-extrabold text-sm block mt-0.5">â‚¹{getLowestTotal().toLocaleString('en-IN')}</span>
               </div>
               <div className="w-px bg-white/20" />
               <div>
@@ -515,10 +513,10 @@ export default function QuotationsPage() {
                                 isLowest ? 'bg-emerald-50 border border-emerald-100' : 'bg-slate-50/50'
                               }`}>
                                 <span className={`text-xs font-bold block ${isLowest ? 'text-emerald-700' : 'text-slate-500'}`}>
-                                  Unit: ₹{price.toLocaleString('en-IN')}
+                                  Unit: â‚¹{price.toLocaleString('en-IN')}
                                 </span>
                                 <span className="text-[10px] text-slate-400 font-semibold block mt-0.5">
-                                  Total: ₹{totalItemPrice.toLocaleString('en-IN')}
+                                  Total: â‚¹{totalItemPrice.toLocaleString('en-IN')}
                                 </span>
                               </div>
                             </td>
@@ -561,7 +559,7 @@ export default function QuotationsPage() {
                     </td>
                     {rfqDetail.quotations.map((quo, idx) => (
                       <td key={idx} className="p-4 text-center border-l border-slate-200/50 font-bold text-slate-600 text-xs">
-                        ₹{quo.subtotal.toLocaleString('en-IN')}
+                        â‚¹{quo.subtotal.toLocaleString('en-IN')}
                       </td>
                     ))}
                   </tr>
@@ -575,7 +573,7 @@ export default function QuotationsPage() {
                         <td key={idx} className={`p-4 text-center border-l border-slate-200/50 font-extrabold text-sm ${
                           isLowestTotal ? 'text-emerald-700 bg-emerald-50/50' : 'text-slate-800'
                         }`}>
-                          <span className="block">₹{quo.total_amount.toLocaleString('en-IN')}</span>
+                          <span className="block">â‚¹{quo.total_amount.toLocaleString('en-IN')}</span>
                           {isLowestTotal && (
                             <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded mt-1">
                               <TrendingDown size={10} /> Lowest Offer
@@ -628,3 +626,5 @@ export default function QuotationsPage() {
     </div>
   )
 }
+
+

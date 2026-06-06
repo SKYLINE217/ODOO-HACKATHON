@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Bell, Search, CheckCircle2, Clock, AlertCircle, User, Settings, LogOut, ChevronDown } from 'lucide-react'
+import { Bell, Search, CheckCircle2, Clock, AlertCircle, User, Settings, LogOut, ChevronDown, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import Link from 'next/link'
 
@@ -15,7 +15,7 @@ interface Notification {
 }
 
 export default function Topbar() {
-  const { user, logout } = useAuth()
+  const { user, loading, logout } = useAuth()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
@@ -139,71 +139,68 @@ export default function Topbar() {
 
         {/* User Dropdown */}
         <div className="relative" ref={userMenuRef}>
-          <button
-            onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false) }}
-            className="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
-          >
-            {user?.avatar_url ? (
-              <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm">
-                {(user?.full_name || 'U').charAt(0)}
-              </div>
-            )}
-            <div className="text-left hidden sm:block">
-              <span className="text-sm font-semibold text-slate-800 block leading-tight">{user?.full_name}</span>
-              <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">{user?.department || user?.role?.replace('_', ' ')}</span>
-            </div>
-            <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
-          </button>
-
-          {showUserMenu && (
-            <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-              {/* User Info Header */}
-              <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                <p className="text-xs font-bold text-slate-800 truncate">{user?.full_name}</p>
-                <p className="text-[11px] text-slate-400 truncate">{user?.email}</p>
-                <span className={`inline-flex mt-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
-                  user?.role === 'admin' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                  user?.role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                  user?.role === 'vendor' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
-                  'bg-indigo-50 text-indigo-700 border-indigo-200'
-                }`}>
-                  {user?.role?.replace('_', ' ')}
-                </span>
-              </div>
-
-              {/* Menu Items */}
-              <div className="py-1">
-                <Link
-                  href="/profile"
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-                >
-                  <User size={15} className="text-slate-400" />
-                  View Profile
-                </Link>
-                <Link
-                  href="/profile?tab=security"
-                  onClick={() => setShowUserMenu(false)}
-                  className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors"
-                >
-                  <Settings size={15} className="text-slate-400" />
-                  Settings
-                </Link>
-              </div>
-
-              <div className="py-1 border-t border-slate-100">
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                >
-                  <LogOut size={15} />
-                  Sign Out
-                </button>
+          {loading ? (
+            <div className="flex items-center gap-2.5 px-3 py-1.5">
+              <div className="w-8 h-8 rounded-full bg-slate-200 animate-pulse" />
+              <div className="hidden sm:block space-y-1">
+                <div className="w-24 h-3 bg-slate-200 rounded animate-pulse" />
+                <div className="w-16 h-2 bg-slate-100 rounded animate-pulse" />
               </div>
             </div>
-          )}
+          ) : user ? (
+            <>
+              <button
+                onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifications(false) }}
+                className="flex items-center gap-2.5 pl-3 pr-2 py-1.5 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all cursor-pointer"
+              >
+                {user.avatar_url ? (
+                  <img src={user.avatar_url} alt={user.full_name} className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white flex items-center justify-center font-bold text-sm">
+                    {(user.full_name || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="text-left hidden sm:block">
+                  <span className="text-sm font-semibold text-slate-800 block leading-tight">{user.full_name}</span>
+                  <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">{user.department || user.role?.replace('_', ' ')}</span>
+                </div>
+                <ChevronDown size={14} className={`text-slate-400 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                    <p className="text-xs font-bold text-slate-800 truncate">{user.full_name}</p>
+                    <p className="text-[11px] text-slate-400 truncate">{user.email}</p>
+                    <span className={`inline-flex mt-1 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                      user.role === 'admin' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                      user.role === 'manager' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                      user.role === 'vendor' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                      'bg-indigo-50 text-indigo-700 border-indigo-200'
+                    }`}>
+                      {user.role?.replace('_', ' ')}
+                    </span>
+                  </div>
+                  <div className="py-1">
+                    <Link href="/profile" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                      <User size={15} className="text-slate-400" /> View Profile
+                    </Link>
+                    <Link href="/profile?tab=security" onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition-colors">
+                      <Settings size={15} className="text-slate-400" /> Settings
+                    </Link>
+                  </div>
+                  <div className="py-1 border-t border-slate-100">
+                    <button onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
+                      <LogOut size={15} /> Sign Out
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
     </header>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -67,8 +67,9 @@ const initialInvoices: Invoice[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function InvoicesPage() {
-  const supabase = createClient()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -128,7 +129,6 @@ export default function InvoicesPage() {
           setIsDbMode(false)
         }
       } catch (err) {
-        console.warn('Using Local Demo Mode for Invoices:', err)
         const localInvs = JSON.parse(localStorage.getItem('vb_invoices_mock') || '[]')
         setInvoices([...localInvs, ...initialInvoices])
         setIsDbMode(false)
@@ -183,7 +183,6 @@ export default function InvoicesPage() {
         localStorage.setItem('vb_invoices_mock', JSON.stringify(onlyMocks))
       }
     } catch (err) {
-      console.error('Error updating invoice status:', err)
       alert('Failed to mark invoice as paid.')
     } finally {
       setActionLoadingId(null)
@@ -299,23 +298,23 @@ export default function InvoicesPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50/50 border border-slate-100 rounded-lg p-3 text-xs">
                   <div>
                     <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">Subtotal</span>
-                    <span className="font-bold text-slate-700 block mt-0.5">₹{inv.subtotal.toLocaleString('en-IN')}</span>
+                    <span className="font-bold text-slate-700 block mt-0.5">â‚¹{inv.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div>
                     <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">CGST / SGST</span>
                     <span className="font-medium text-slate-700 block mt-0.5">
-                      ₹{inv.cgst_amount.toLocaleString('en-IN')} / ₹{inv.sgst_amount.toLocaleString('en-IN')}
+                      â‚¹{inv.cgst_amount.toLocaleString('en-IN')} / â‚¹{inv.sgst_amount.toLocaleString('en-IN')}
                     </span>
                   </div>
                   {inv.igst_amount > 0 && (
                     <div>
                       <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">IGST</span>
-                      <span className="font-medium text-slate-700 block mt-0.5">₹{inv.igst_amount.toLocaleString('en-IN')}</span>
+                      <span className="font-medium text-slate-700 block mt-0.5">â‚¹{inv.igst_amount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   <div>
                     <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">Total Tax</span>
-                    <span className="font-medium text-slate-700 block mt-0.5">₹{inv.total_tax.toLocaleString('en-IN')}</span>
+                    <span className="font-medium text-slate-700 block mt-0.5">â‚¹{inv.total_tax.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
@@ -332,7 +331,7 @@ export default function InvoicesPage() {
               <div className="md:w-48 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-slate-100 gap-4">
                 <div className="text-left md:text-center">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Invoice Total</span>
-                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">₹{inv.total_amount.toLocaleString('en-IN')}</span>
+                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">â‚¹{inv.total_amount.toLocaleString('en-IN')}</span>
                 </div>
 
                 {inv.status === 'sent' ? (
@@ -360,3 +359,5 @@ export default function InvoicesPage() {
     </div>
   )
 }
+
+

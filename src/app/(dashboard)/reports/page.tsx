@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState } from 'react'
 import { 
@@ -35,7 +35,7 @@ export default function ReportsPage() {
           </div>
           <div>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">YTD Procurement Spend</span>
-            <span className="font-extrabold text-slate-800 text-lg block mt-0.5">₹48,50,000</span>
+            <span className="font-extrabold text-slate-800 text-lg block mt-0.5">â‚¹48,50,000</span>
           </div>
         </div>
 
@@ -70,7 +70,7 @@ export default function ReportsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
                 <span>IT & Software</span>
-                <span>₹8,14,200 (57%)</span>
+                <span>â‚¹8,14,200 (57%)</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-indigo-600 rounded-full" style={{ width: '57%' }} />
@@ -80,7 +80,7 @@ export default function ReportsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
                 <span>Office supplies</span>
-                <span>₹3,30,400 (23%)</span>
+                <span>â‚¹3,30,400 (23%)</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-emerald-500 rounded-full" style={{ width: '23%' }} />
@@ -90,7 +90,7 @@ export default function ReportsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
                 <span>Logistics</span>
-                <span>₹1,85,000 (13%)</span>
+                <span>â‚¹1,85,000 (13%)</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500 rounded-full" style={{ width: '13%' }} />
@@ -100,7 +100,7 @@ export default function ReportsPage() {
             <div>
               <div className="flex justify-between text-xs font-semibold text-slate-700 mb-1.5">
                 <span>Maintenance</span>
-                <span>₹99,400 (7%)</span>
+                <span>â‚¹99,400 (7%)</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div className="h-full bg-rose-500 rounded-full" style={{ width: '7%' }} />
@@ -156,3 +156,5 @@ export default function ReportsPage() {
     </div>
   )
 }
+
+

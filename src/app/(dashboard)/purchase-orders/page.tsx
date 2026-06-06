@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -57,8 +57,9 @@ const initialPos: PurchaseOrder[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function PurchaseOrdersPage() {
-  const supabase = createClient()
   const [pos, setPos] = useState<PurchaseOrder[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -109,7 +110,6 @@ export default function PurchaseOrdersPage() {
           setIsDbMode(false)
         }
       } catch (err) {
-        console.warn('Using Local Demo Mode for Purchase Orders:', err)
         const localPos = JSON.parse(localStorage.getItem('vb_purchase_orders_mock') || '[]')
         setPos([...localPos, ...initialPos])
         setIsDbMode(false)
@@ -231,7 +231,7 @@ export default function PurchaseOrdersPage() {
                 {/* Info footer */}
                 <div className="flex flex-wrap gap-6 text-xs text-slate-500 pt-2 border-t border-slate-50">
                   <span className="flex items-center gap-1.5"><Calendar size={14} /> Expected Delivery: <span className="font-semibold text-slate-700">{po.delivery_date}</span></span>
-                  <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-semibold text-slate-750">₹{po.total_amount.toLocaleString('en-IN')}</span></span>
+                  <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-semibold text-slate-750">â‚¹{po.total_amount.toLocaleString('en-IN')}</span></span>
                 </div>
               </div>
 
@@ -251,3 +251,5 @@ export default function PurchaseOrdersPage() {
     </div>
   )
 }
+
+

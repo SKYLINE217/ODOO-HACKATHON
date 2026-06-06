@@ -80,8 +80,9 @@ const fallbackVendors: Vendor[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function VendorsPage() {
-  const supabase = createClient()
   const { user } = useAuth()
   
   const [vendors, setVendors] = useState<Vendor[]>(fallbackVendors)
@@ -89,6 +90,8 @@ export default function VendorsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [dbNotice, setDbNotice] = useState<string | null>(null)
+  const [formSaving, setFormSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   // Form states
   const [companyName, setCompanyName] = useState('')
@@ -98,23 +101,29 @@ export default function VendorsPage() {
   const [phone, setPhone] = useState('')
   const [gstNumber, setGstNumber] = useState('')
 
+  // Close modal on Escape key
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowAddForm(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
+
   // Load vendors from Supabase on mount
   useEffect(() => {
     async function loadVendors() {
       try {
         const { data, error } = await supabase
           .from('vendors')
-          .select('*')
+          .select('*, vendor_categories(name)')
           .order('created_at', { ascending: false })
 
         if (error) throw error
         
         if (data && data.length > 0) {
-          // Map database structure to local interface
           const mapped: Vendor[] = data.map((v: any) => ({
             id: v.id,
             company_name: v.company_name,
-            category: v.notes || 'IT & Software', // using notes or fallback for name
+            category: v.vendor_categories?.name || 'General',
             status: v.status || 'pending',
             contact_person: v.contact_person,
             email: v.email,
@@ -127,21 +136,22 @@ export default function VendorsPage() {
           setDbNotice('Synced with Supabase database')
         }
       } catch (err: any) {
-        console.warn('Failed to load vendors from Supabase, using mock local storage:', err.message)
-        // Check localStorage
+        // Fallback to localStorage
         const stored = localStorage.getItem('vb_vendors')
         if (stored) {
-          setVendors(JSON.parse(stored))
+          try { setVendors(JSON.parse(stored)) } catch { }
         }
       }
     }
 
     loadVendors()
-  }, [supabase])
+  }, [])
 
   const handleAddVendor = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!companyName || !contactPerson || !email) return
+    setFormSaving(true)
+    setFormError(null)
 
     const newVendor: Vendor = {
       id: Math.random().toString(36).substring(2, 9),
@@ -157,39 +167,46 @@ export default function VendorsPage() {
     }
 
     try {
-      // Try to save to Supabase
+      // Look up category_id from vendor_categories table
+      const { data: catData } = await supabase
+        .from('vendor_categories')
+        .select('id')
+        .eq('name', category)
+        .single()
+
       const { error } = await supabase
         .from('vendors')
         .insert({
           company_name: companyName,
+          category_id: catData?.id || null,
           status: 'pending',
           contact_person: contactPerson,
           email,
           phone,
           gst_number: gstNumber || null,
-          notes: category, // store category string in notes for simple mapping
-          created_by: user?.id || 'demo-user-id'
+          created_by: user?.id || null
         })
 
       if (error) throw error
-
       setDbNotice('Vendor saved to Supabase!')
     } catch (err: any) {
-      console.warn('Could not save vendor to Supabase, saving to local session storage:', err.message)
+      setFormError(err.message?.includes('duplicate') ? 'A vendor with this email already exists.' : (err.message || 'Failed to save. Data kept locally.'))
+    } finally {
+      setFormSaving(false)
     }
 
-    // Always update local UI state
+    // Update local UI state
     const updated = [newVendor, ...vendors]
     setVendors(updated)
     localStorage.setItem('vb_vendors', JSON.stringify(updated))
 
     setShowAddForm(false)
-    // Reset form fields
     setCompanyName('')
     setContactPerson('')
     setEmail('')
     setPhone('')
     setGstNumber('')
+    setFormError(null)
   }
 
   const filteredVendors = vendors.filter((v) => {
@@ -260,10 +277,19 @@ export default function VendorsPage() {
 
       {/* Add Vendor Form (Modal) */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false) }}
+        >
           <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-2">Register New Vendor</h3>
-            <p className="text-xs text-slate-500 mb-6">Enter compliance and contact information to register this vendor.</p>
+            <p className="text-xs text-slate-500 mb-4">Enter compliance and contact information to register this vendor.</p>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg">
+                {formError}
+              </div>
+            )}
             
             <form onSubmit={handleAddVendor} className="space-y-4">
               <div>

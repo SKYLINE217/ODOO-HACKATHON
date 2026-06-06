@@ -80,8 +80,9 @@ const fallbackRfqs: RFQ[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function RfqsPage() {
-  const supabase = createClient()
   const { user } = useAuth()
   
   const [rfqs, setRfqs] = useState<RFQ[]>(fallbackRfqs)
@@ -89,6 +90,8 @@ export default function RfqsPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [dbNotice, setDbNotice] = useState<string | null>(null)
+  const [formSaving, setFormSaving] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   // Form states
   const [title, setTitle] = useState('')
@@ -99,6 +102,13 @@ export default function RfqsPage() {
   
   // Items array inside form
   const [formItems, setFormItems] = useState<RFQItem[]>([{ item_name: '', quantity: 1, unit: 'units', description: '' }])
+
+  // Escape key closes modal
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowAddForm(false) }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [])
 
   // Load RFQs from Supabase on mount
   useEffect(() => {
@@ -141,7 +151,7 @@ export default function RfqsPage() {
     }
 
     loadRfqs()
-  }, [supabase])
+  }, [])
 
   const handleAddItemRow = () => {
     setFormItems([...formItems, { item_name: '', quantity: 1, unit: 'units', description: '' }])
@@ -161,11 +171,13 @@ export default function RfqsPage() {
   const handleCreateRfq = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!title || !deadline || !budget) return
+    setFormSaving(true)
+    setFormError(null)
 
     const newRfqId = Math.random().toString(36).substring(2, 9)
     const newRfq: RFQ = {
       id: newRfqId,
-      rfq_number: `RFQ-2026-000${45 + rfqs.length - 3}`,
+      rfq_number: `RFQ-2026-${String(1000 + rfqs.length).padStart(5, '0')}`,
       title,
       description,
       status: 'draft',
@@ -176,7 +188,6 @@ export default function RfqsPage() {
     }
 
     try {
-      // 1. Insert parent RFQ record
       const { data: rfqRecord, error: rfqErr } = await supabase
         .from('rfqs')
         .insert({
@@ -185,15 +196,14 @@ export default function RfqsPage() {
           status: 'draft',
           deadline: new Date(deadline).toISOString(),
           budget_estimate: Number(budget),
-          created_by: user?.id || 'demo-user-id'
+          created_by: user?.id
         })
         .select()
         .single()
 
       if (rfqErr) throw rfqErr
 
-      // 2. Insert line items linked to parent RFQ
-      if (rfqRecord) {
+      if (rfqRecord && newRfq.items.length > 0) {
         const itemsToInsert = newRfq.items.map((item, index) => ({
           rfq_id: rfqRecord.id,
           item_name: item.item_name,
@@ -202,32 +212,28 @@ export default function RfqsPage() {
           description: item.description || '',
           sort_order: index
         }))
-
-        const { error: itemsErr } = await supabase
-          .from('rfq_items')
-          .insert(itemsToInsert)
-
-        if (itemsErr) throw itemsErr
+        await supabase.from('rfq_items').insert(itemsToInsert)
       }
 
+      // Use server-generated rfq_number if available
+      if (rfqRecord?.rfq_number) newRfq.rfq_number = rfqRecord.rfq_number
+      if (rfqRecord?.id) newRfq.id = rfqRecord.id
       setDbNotice('RFQ created successfully in Supabase!')
     } catch (err: any) {
-      console.warn('Could not save RFQ to Supabase, saving to local session storage:', err.message)
+      setFormError(err.message || 'Could not save to database. Kept locally.')
+    } finally {
+      setFormSaving(false)
     }
 
-    // Always update local UI state
-    const updated = [newRfq, ...rfqs]
-    setRfqs(updated)
-    localStorage.setItem('vb_rfqs', JSON.stringify(updated))
-
+    setRfqs([newRfq, ...rfqs])
     setShowAddForm(false)
-    // Reset form fields
     setTitle('')
     setDescription('')
     setDeadline('')
     setBudget('')
     setInvitedCount('3')
     setFormItems([{ item_name: '', quantity: 1, unit: 'units', description: '' }])
+    setFormError(null)
   }
 
   const filteredRfqs = rfqs.filter((r) => {
@@ -298,10 +304,19 @@ export default function RfqsPage() {
 
       {/* Create RFQ Form (Modal) */}
       {showAddForm && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-start justify-center p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false) }}
+        >
           <div className="bg-white border border-slate-200 rounded-xl max-w-2xl w-full shadow-2xl p-6 relative my-8 animate-in zoom-in-95 duration-200">
             <h3 className="text-lg font-bold text-slate-800 mb-1">Create RFQ</h3>
-            <p className="text-xs text-slate-500 mb-6">Create a request, add requisition items, and select vendors to send invites.</p>
+            <p className="text-xs text-slate-500 mb-4">Create a request, add requisition items, and select vendors to send invites.</p>
+
+            {formError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg">
+                {formError}
+              </div>
+            )}
             
             <form onSubmit={handleCreateRfq} className="space-y-6">
               {/* Basic Details */}

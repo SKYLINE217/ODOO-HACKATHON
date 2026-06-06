@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -42,7 +42,7 @@ const mockLogs: ActivityLog[] = [
     entity_type: 'purchase_order',
     entity_id: 'PO-2026-00009',
     action: 'APPROVE',
-    description: 'Approved purchase order value ₹8,14,200',
+    description: 'Approved purchase order value â‚¹8,14,200',
     performed_by: 'Sarah Connor (Manager)',
     performed_at: '2026-06-06 08:20:45',
     ip_address: '192.168.1.50'
@@ -69,8 +69,9 @@ const mockLogs: ActivityLog[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function ActivityLogPage() {
-  const supabase = createClient()
   const [logs, setLogs] = useState<ActivityLog[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   
@@ -114,7 +115,6 @@ export default function ActivityLogPage() {
           setIsDbMode(false)
         }
       } catch (err) {
-        console.warn('Using Local Demo Mode for Activity Audit Logs:', err)
         setLogs(mockLogs)
         setIsDbMode(false)
       } finally {
@@ -210,3 +210,5 @@ export default function ActivityLogPage() {
     </div>
   )
 }
+
+

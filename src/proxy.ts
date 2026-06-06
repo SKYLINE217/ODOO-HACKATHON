@@ -11,26 +11,25 @@ const ROLE_ROUTES: Record<string, string[]> = {
   '/activity': ['admin', 'procurement_officer', 'manager'],
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gbfjkjtcjtbuwdvsscpy.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "sb_publishable_placeholder",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://gbfjkjtcjtbuwdvsscpy.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || 'sb_publishable_placeholder',
     {
       cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name, value, options) {
-          request.cookies.set({ name, value, ...options })
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+          })
           response = NextResponse.next({ request })
-          response.cookies.set({ name, value, ...options })
-        },
-        remove(name, options) {
-          request.cookies.set({ name, value: '', ...options })
-          response = NextResponse.next({ request })
-          response.cookies.set({ name, value: '', ...options })
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
@@ -50,16 +49,16 @@ export async function middleware(request: NextRequest) {
   try {
     // Check for bypass session cookie
     const bypassCookie = request.cookies.get('sb-bypass-session')?.value
-    let localUser = null
+    let localUser: { role?: string } | null = null
     if (bypassCookie) {
       try {
         localUser = JSON.parse(decodeURIComponent(bypassCookie))
-      } catch (e) {
-        console.warn('Failed to parse bypass cookie', e)
+      } catch {
+        // Malformed — ignore
       }
     }
 
-    // Note: getUser() is secure and verifies the JWT signature
+    // getUser() verifies the JWT signature server-side (secure)
     const { data: { user } } = await supabase.auth.getUser()
     const hasSession = !!user || !!localUser
 
@@ -78,17 +77,16 @@ export async function middleware(request: NextRequest) {
     if (hasSession) {
       let userRole: string | null = null
 
-      if (localUser) {
+      if (localUser?.role) {
         userRole = localUser.role
       } else if (user) {
-        // Fetch user role from profiles
-        const { data: profile, error } = await supabase
+        const { data: profile } = await supabase
           .from('profiles')
           .select('role')
           .eq('id', user.id)
           .single()
         
-        if (!error && profile) {
+        if (profile) {
           userRole = profile.role
         }
       }
@@ -96,14 +94,13 @@ export async function middleware(request: NextRequest) {
       if (userRole) {
         for (const [route, allowedRoles] of Object.entries(ROLE_ROUTES)) {
           if (pathname.startsWith(route) && !allowedRoles.includes(userRole)) {
-            // Redirect unauthorized users to root
             return NextResponse.redirect(new URL('/', request.url))
           }
         }
       }
     }
-  } catch (err) {
-    console.error('Middleware auth check error:', err)
+  } catch {
+    // Auth check failed — allow request to proceed (avoids lock-out loops)
   }
 
   return response

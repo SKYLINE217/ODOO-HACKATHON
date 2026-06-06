@@ -62,13 +62,14 @@ const initialApprovals: ApprovalRequest[] = [
   }
 ]
 
+const supabase = createClient()
+
 export default function ApprovalsPage() {
-  const supabase = createClient()
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([])
-  
   const [isDbMode, setIsDbMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadApprovals() {
@@ -117,7 +118,6 @@ export default function ApprovalsPage() {
           setIsDbMode(false)
         }
       } catch (err) {
-        console.warn('Using Local Demo Mode for Approvals Queue:', err)
         const localApps = JSON.parse(localStorage.getItem('vb_approvals_mock') || '[]')
         setApprovals([...localApps, ...initialApprovals])
         setIsDbMode(false)
@@ -162,9 +162,8 @@ export default function ApprovalsPage() {
         const onlyMocks = updated.filter(item => item.id.startsWith('mock-') || item.id.length === 1)
         localStorage.setItem('vb_approvals_mock', JSON.stringify(onlyMocks))
       }
-    } catch (err) {
-      console.error('Error actioning approval request:', err)
-      alert('Failed to submit approval action.')
+    } catch (err: any) {
+      setActionError(err?.message || 'Failed to submit approval action. Please try again.')
     } finally {
       setActionLoadingId(null)
     }
@@ -174,6 +173,14 @@ export default function ApprovalsPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+
+      {/* Action Error Toast */}
+      {actionError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 rounded-xl p-3 flex items-center justify-between text-xs font-semibold">
+          <span>{actionError}</span>
+          <button onClick={() => setActionError(null)} className="ml-4 text-rose-400 hover:text-rose-600 font-bold cursor-pointer">✕</button>
+        </div>
+      )}
       {/* DB Connection Alert */}
       {!isDbMode && (
         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-4 flex items-center justify-between text-xs gap-3">
@@ -257,7 +264,7 @@ export default function ApprovalsPage() {
               <div className="md:w-56 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-slate-100 gap-4">
                 <div className="text-left md:text-center">
                   <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Requisition Value</span>
-                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">₹{req.amount.toLocaleString('en-IN')}</span>
+                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">â‚¹{req.amount.toLocaleString('en-IN')}</span>
                 </div>
 
                 {req.status === 'pending' ? (
@@ -300,3 +307,4 @@ export default function ApprovalsPage() {
     </div>
   )
 }
+

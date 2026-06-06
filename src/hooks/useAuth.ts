@@ -1,43 +1,56 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAuthStore, UserProfile } from '@/stores/useAuthStore'
 import { createClient } from '@/utils/supabase/client'
 
+// Singleton supabase client — avoids re-creating on every render
+const supabase = createClient()
+
 export function useAuth() {
   const { user, setUser, loading, setLoading, logout } = useAuthStore()
-  const supabase = createClient()
+  const initialized = useRef(false)
 
   useEffect(() => {
+    // Only run once
+    if (initialized.current) return
+    initialized.current = true
+
     async function fetchUser() {
       try {
         setLoading(true)
         
-        // First check for bypass session cookie
+        // Check for bypass session cookie (dev mode)
         if (typeof window !== 'undefined') {
           const bypassCookie = document.cookie
             .split('; ')
             .find(row => row.startsWith('sb-bypass-session='))
           
           if (bypassCookie) {
-            const decodedValue = decodeURIComponent(bypassCookie.split('=')[1])
-            const decoded = JSON.parse(decodedValue)
-            setUser({
-              id: decoded.id || 'demo-user-id',
-              full_name: decoded.full_name,
-              email: decoded.email || '',
-              role: decoded.role,
-              avatar_url: decoded.avatar_url || null,
-              department: decoded.department || null
-            })
-            setLoading(false)
-            return
+            try {
+              const raw = bypassCookie.split('=').slice(1).join('=') // handle = in value
+              const decoded = JSON.parse(decodeURIComponent(raw))
+              setUser({
+                id: decoded.id || 'demo-user-id',
+                full_name: decoded.full_name || 'Demo User',
+                email: decoded.email || '',
+                role: decoded.role || 'admin',
+                avatar_url: decoded.avatar_url || null,
+                department: decoded.department || null
+              })
+              setLoading(false)
+              return
+            } catch {
+              // Malformed cookie — clear it and fall through
+              document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+            }
           }
         }
 
+        // Try real Supabase session
         const { data: { session } } = await supabase.auth.getSession()
         if (session?.user) {
           const { data: profile, error } = await supabase
             .from('profiles')
-            .select('*')
+            .select('id, full_name, email, role, avatar_url, department')
             .eq('id', session.user.id)
             .single()
           
@@ -53,7 +66,7 @@ export function useAuth() {
           }
         }
       } catch (err) {
-        console.warn('Supabase Auth connection failed, using demo account:', err)
+        // Auth unavailable — leave user as null so middleware handles redirect
       } finally {
         setLoading(false)
       }
@@ -61,13 +74,19 @@ export function useAuth() {
 
     fetchUser()
 
+    // Subscribe to auth state changes (e.g. Google OAuth callback)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setLoading(false)
+          return
+        }
         if (session?.user) {
           try {
             const { data: profile } = await supabase
               .from('profiles')
-              .select('*')
+              .select('id, full_name, email, role, avatar_url, department')
               .eq('id', session.user.id)
               .single()
             if (profile) {
@@ -81,17 +100,16 @@ export function useAuth() {
               })
             }
           } catch (err) {
-            console.error('Error fetching auth user profile:', err)
+            // Profile fetch failed — session still valid
           }
-        } else {
-          setUser(null)
         }
         setLoading(false)
       }
     )
 
     return () => subscription.unsubscribe()
-  }, [setUser, setLoading, supabase])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { user, loading, role: user?.role, logout }
 }
+
