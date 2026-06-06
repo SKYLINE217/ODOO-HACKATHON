@@ -11,20 +11,6 @@ const ROLE_ROUTES: Record<string, string[]> = {
   '/activity': ['admin', 'procurement_officer', 'manager'],
 }
 
-function decodeJwt(token: string) {
-  try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/')
-    // Pad base64 if needed
-    const padded = payload + '='.repeat((4 - payload.length % 4) % 4)
-    const decoded = atob(padded)
-    return JSON.parse(decoded)
-  } catch {
-    return null
-  }
-}
-
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next({ request })
   const pathname = request.nextUrl.pathname
@@ -51,46 +37,9 @@ export async function middleware(request: NextRequest) {
       }
     }
 
-    // ── 2. If no bypass cookie, check for real Supabase session cookie ──────
-    if (!localUser) {
-      let token: string | undefined
-
-      for (const cookie of request.cookies.getAll()) {
-        // Standard Supabase access token
-        if (cookie.name === 'sb-access-token') {
-          token = cookie.value
-          break
-        }
-        // Supabase SSR auth token (format: sb-<ref>-auth-token)
-        if (cookie.name.startsWith('sb-') && cookie.name.endsWith('-auth-token')) {
-          try {
-            const parsed = JSON.parse(decodeURIComponent(cookie.value))
-            if (Array.isArray(parsed) && parsed[0]) {
-              token = parsed[0]
-            } else if (parsed?.access_token) {
-              token = parsed.access_token
-            }
-          } catch {
-            token = cookie.value
-          }
-          break
-        }
-      }
-
-      if (token) {
-        const decoded = decodeJwt(token)
-        if (decoded && decoded.exp * 1000 > Date.now()) {
-          localUser = {
-            id: decoded.sub,
-            role: decoded.user_metadata?.role || decoded.app_metadata?.role || 'procurement_officer',
-          }
-        }
-      }
-    }
-
     const hasSession = !!localUser
 
-    // ── 3. Auth guards ──────────────────────────────────────────────────────
+    // ── 2. Auth guards ──────────────────────────────────────────────────────
     const isPublicRoute = PUBLIC_ROUTES.some(r => pathname.startsWith(r))
 
     // Unauthenticated → redirect to login

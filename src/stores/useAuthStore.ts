@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { createClient } from '@/utils/supabase/client'
 
 export interface UserProfile {
   id: string
@@ -21,7 +20,6 @@ interface AuthState {
   logout: () => Promise<void>
 }
 
-// Clear ALL session-related cookies — Supabase SSR tokens, bypass cookie
 function clearAllSessionCookies() {
   if (typeof window === 'undefined') return
   const cookiesToClear = [
@@ -33,7 +31,6 @@ function clearAllSessionCookies() {
     document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
     document.cookie = `${name}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
   })
-  // Also wipe any sb-* Supabase auth cookies by scanning all cookies
   document.cookie.split(';').forEach(c => {
     const name = c.trim().split('=')[0]
     if (name.startsWith('sb-')) {
@@ -48,16 +45,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
   logout: async () => {
-    // 1. Sign out from Supabase server-side first
+    // Also use the new API route to clear the cookie reliably
     try {
-      const supabase = createClient()
-      await supabase.auth.signOut({ scope: 'global' })
-    } catch { /* ignore — may be in bypass mode */ }
+      await fetch('/api/auth/set-session', { method: 'DELETE', credentials: 'same-origin' })
+    } catch {}
 
-    // 2. Clear all session cookies
     clearAllSessionCookies()
 
-    // 3. Clear localStorage of any cached data
     if (typeof window !== 'undefined') {
       const keysToRemove = Object.keys(localStorage).filter(k =>
         k.startsWith('vb_') || k.startsWith('sb-') || k.includes('supabase')
@@ -65,7 +59,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       keysToRemove.forEach(k => localStorage.removeItem(k))
     }
 
-    // 4. Reset store state
     set({ user: null, loading: false })
+    
+    // Hard navigate to login after logout
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login'
+    }
   }
 }))
