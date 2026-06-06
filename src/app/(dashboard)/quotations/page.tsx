@@ -416,60 +416,60 @@ export default function QuotationsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold text-slate-500 font-mono">QUOTATIONS</span>
-            <span className="text-slate-600 font-medium">/</span>
+            <span className="text-xs font-bold text-[var(--text-muted)] font-mono">QUOTATIONS</span>
+            <span className="text-[var(--text-muted)] font-medium">/</span>
             <div className="relative inline-block text-left">
               <select
                 value={selectedRfqId}
                 onChange={(e) => setSelectedRfqId(e.target.value)}
-                className="appearance-none bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg pl-3 pr-8 py-1.5 text-xs font-bold text-white focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+                className="appearance-none bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg pl-3 pr-8 py-1.5 text-xs font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
               >
                 {rfqList.map(rfq => (
-                  <option key={rfq.id} value={rfq.id} className="bg-[var(--bg-subtle)] text-white">
+                  <option key={rfq.id} value={rfq.id} className="bg-[var(--bg-surface)] text-[var(--text-primary)]">
                     {rfq.rfq_number} ({rfq.title})
                   </option>
                 ))}
               </select>
-              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] pointer-events-none" />
             </div>
           </div>
-          <h2 className="text-2xl font-bold text-white tracking-tight mt-2.5 font-display font-bold">Quotation Comparison Sheet</h2>
-          <p className="text-slate-400 text-sm mt-1">Side-by-side analysis of bids received for "{rfqDetail.title}".</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight mt-2.5 font-display">Quotation Comparison Sheet</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Side-by-side analysis of bids received for "{rfqDetail.title}".</p>
         </div>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
-          <span className="text-xs text-slate-400 font-semibold font-mono">Loading comparative matrix...</span>
+          <span className="text-xs text-[var(--text-secondary)] font-semibold font-mono">Loading comparative matrix...</span>
         </div>
       ) : rfqDetail.quotations.length === 0 ? (
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
-          <Info size={36} className="text-slate-650 mx-auto mb-3" />
-          <h4 className="font-bold text-white text-sm">No Quotations Received</h4>
-          <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
+          <Info size={36} className="text-[var(--text-muted)] mx-auto mb-3" />
+          <h4 className="font-bold text-[var(--text-primary)] text-sm">No Quotations Received</h4>
+          <p className="text-[var(--text-secondary)] text-xs mt-1.5 max-w-sm mx-auto">
             There are no submitted bids or quotes for this RFQ yet. Vendors must submit quotations to populate this comparison sheet.
           </p>
         </div>
       ) : (
         <>
           {/* Overview info box */}
-          <div className="bg-gradient-to-r from-indigo-950/80 to-slate-900/80 text-slate-300 rounded-xl p-6 shadow-lg border border-[var(--border-default)] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="bg-[var(--bg-elevated)] text-[var(--text-secondary)] rounded-xl p-6 shadow-lg border border-[var(--border-default)] flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
             <div>
-              <h3 className="font-bold text-white text-base font-display">Procurement Specification</h3>
-              <p className="text-xs text-indigo-300 mt-1 max-w-xl">
+              <h3 className="font-bold text-[var(--text-primary)] text-base font-display">Procurement Specification</h3>
+              <p className="text-xs text-[var(--text-secondary)] mt-1 max-w-xl">
                 Comparing {rfqDetail.quotations.length} vendor quotations. Highlighted cells indicate the lowest submitted prices for respective line items and totals.
               </p>
             </div>
-            <div className="flex gap-6 text-xs bg-white/5 border border-white/10 rounded-lg p-3">
+            <div className="flex gap-6 text-xs bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg p-3">
               <div>
-                <span className="text-indigo-300 block font-semibold uppercase tracking-wider text-[10px]">Lowest Bid</span>
-                <span className="text-emerald-400 font-extrabold text-sm block mt-0.5 f1-numbers">{"\u20B9"}{getLowestTotal().toLocaleString('en-IN')}</span>
+                <span className="text-[var(--text-muted)] block font-semibold uppercase tracking-wider text-[10px]">Lowest Bid</span>
+                <span className="text-emerald-500 font-extrabold text-sm block mt-0.5 f1-numbers">{"\u20B9"}{getLowestTotal().toLocaleString('en-IN')}</span>
               </div>
-              <div className="w-px bg-slate-800" />
+              <div className="w-px bg-[var(--border-default)]" />
               <div>
-                <span className="text-indigo-300 block font-semibold uppercase tracking-wider text-[10px]">Award Status</span>
-                <span className="text-white font-extrabold text-xs block mt-1 capitalize max-w-[150px] truncate">
+                <span className="text-[var(--text-muted)] block font-semibold uppercase tracking-wider text-[10px]">Award Status</span>
+                <span className="text-[var(--text-primary)] font-extrabold text-xs block mt-1 capitalize max-w-[150px] truncate">
                   {awardedVendor ? `Awarded to ${awardedVendor}` : 'Pending Decision'}
                 </span>
               </div>
@@ -482,12 +482,12 @@ export default function QuotationsPage() {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)]">
-                    <th className="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider w-64">Item Details / Specs</th>
+                    <th className="p-4 text-xs font-bold text-[var(--text-secondary)] uppercase tracking-wider w-64">Item Details / Specs</th>
                     {rfqDetail.quotations.map((quo, idx) => (
                       <th key={idx} className="p-4 text-center border-l border-[var(--border-default)]">
                         <div className="flex flex-col items-center">
-                          <span className="font-bold text-white text-sm block">{quo.vendor_name}</span>
-                          <span className="text-[10px] text-slate-400 font-mono mt-0.5">{quo.quotation_number}</span>
+                          <span className="font-bold text-[var(--text-primary)] text-sm block">{quo.vendor_name}</span>
+                          <span className="text-[10px] text-[var(--text-secondary)] font-mono mt-0.5">{quo.quotation_number}</span>
                         </div>
                       </th>
                     ))}
@@ -498,10 +498,10 @@ export default function QuotationsPage() {
                   {rfqDetail.items.map((item, index) => {
                     const lowestPrice = getLowestPrice(item.name)
                     return (
-                      <tr key={index} className="border-b border-[var(--border-default)] hover:bg-white/5 transition-colors">
+                      <tr key={index} className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] transition-colors">
                         <td className="p-4">
-                          <p className="font-bold text-white text-sm leading-snug">{item.name}</p>
-                          <span className="text-xs text-slate-400 font-medium">Quantity: {item.quantity} {item.unit}</span>
+                          <p className="font-bold text-[var(--text-primary)] text-sm leading-snug">{item.name}</p>
+                          <span className="text-xs text-[var(--text-secondary)] font-medium">Quantity: {item.quantity} {item.unit}</span>
                         </td>
                         {rfqDetail.quotations.map((quo, qidx) => {
                           const price = quo.item_prices[item.name] || 0
@@ -512,10 +512,10 @@ export default function QuotationsPage() {
                               <div className={`p-3 rounded-lg inline-block w-40 ${
                                 isLowest ? 'bg-emerald-500/10 border border-emerald-500/25' : 'bg-[var(--bg-subtle)] border border-[var(--border-strong)]'
                               }`}>
-                                <span className={`text-xs font-bold block f1-numbers ${isLowest ? 'text-emerald-400' : 'text-slate-300'}`}>
+                                <span className={`text-xs font-bold block f1-numbers ${isLowest ? 'text-emerald-500' : 'text-[var(--text-primary)]'}`}>
                                   Unit: {"\u20B9"}{price.toLocaleString('en-IN')}
                                 </span>
-                                <span className="text-[10px] text-slate-500 font-semibold block mt-0.5 f1-numbers">
+                                <span className="text-[10px] text-[var(--text-secondary)] font-semibold block mt-0.5 f1-numbers">
                                   Total: {"\u20B9"}{totalItemPrice.toLocaleString('en-IN')}
                                 </span>
                               </div>
@@ -528,25 +528,25 @@ export default function QuotationsPage() {
 
                   {/* Delivery and Validity Terms */}
                   <tr className="border-b border-[var(--border-default)] bg-[var(--bg-subtle)]/50">
-                    <td className="p-4 font-bold text-slate-400 text-xs uppercase tracking-wider font-mono">Delivery Time</td>
+                    <td className="p-4 font-bold text-[var(--text-secondary)] text-xs uppercase tracking-wider font-mono">Delivery Time</td>
                     {rfqDetail.quotations.map((quo, idx) => (
-                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-slate-200">
+                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-[var(--text-primary)]">
                         {quo.delivery_days} days
                       </td>
                     ))}
                   </tr>
                   <tr className="border-b border-[var(--border-default)]">
-                    <td className="p-4 font-bold text-slate-400 text-xs uppercase tracking-wider font-mono">Payment Terms</td>
+                    <td className="p-4 font-bold text-[var(--text-secondary)] text-xs uppercase tracking-wider font-mono">Payment Terms</td>
                     {rfqDetail.quotations.map((quo, idx) => (
-                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-slate-200">
+                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-[var(--text-primary)]">
                         {quo.payment_terms}
                       </td>
                     ))}
                   </tr>
                   <tr className="border-b border-[var(--border-default)] bg-[var(--bg-subtle)]/50">
-                    <td className="p-4 font-bold text-slate-400 text-xs uppercase tracking-wider font-mono">Validity Period</td>
+                    <td className="p-4 font-bold text-[var(--text-secondary)] text-xs uppercase tracking-wider font-mono">Validity Period</td>
                     {rfqDetail.quotations.map((quo, idx) => (
-                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-slate-200">
+                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] text-xs font-bold text-[var(--text-primary)]">
                         {quo.validity_days} days
                       </td>
                     ))}
@@ -555,27 +555,27 @@ export default function QuotationsPage() {
                   {/* Totals Summary */}
                   <tr className="border-b border-[var(--border-default)] bg-[var(--bg-subtle)]">
                     <td className="p-4">
-                      <span className="font-bold text-white text-xs uppercase tracking-wider font-mono">Subtotal</span>
+                      <span className="font-bold text-[var(--text-primary)] text-xs uppercase tracking-wider font-mono">Subtotal</span>
                     </td>
                     {rfqDetail.quotations.map((quo, idx) => (
-                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] font-bold text-slate-300 text-xs f1-numbers">
+                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)] font-bold text-[var(--text-primary)] text-xs f1-numbers">
                         {"\u20B9"}{quo.subtotal.toLocaleString('en-IN')}
                       </td>
                     ))}
                   </tr>
-                  <tr className="border-b border-[var(--border-default)] bg-indigo-950/20">
+                  <tr className="border-b border-[var(--border-default)] bg-[var(--bg-subtle)]">
                     <td className="p-4">
-                      <span className="font-extrabold text-white text-sm uppercase tracking-wider font-mono">Total (incl. GST)</span>
+                      <span className="font-extrabold text-[var(--text-primary)] text-sm uppercase tracking-wider font-mono">Total (incl. GST)</span>
                     </td>
                     {rfqDetail.quotations.map((quo, idx) => {
                       const isLowestTotal = quo.total_amount === getLowestTotal()
                       return (
                         <td key={idx} className={`p-4 text-center border-l border-[var(--border-default)] font-extrabold text-sm ${
-                          isLowestTotal ? 'text-emerald-400 bg-emerald-500/10' : 'text-white'
+                          isLowestTotal ? 'text-emerald-500 bg-emerald-500/10' : 'text-[var(--text-primary)]'
                         }`}>
                           <span className="block f1-numbers">{"\u20B9"}{quo.total_amount.toLocaleString('en-IN')}</span>
                           {isLowestTotal && (
-                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded mt-1 font-mono uppercase">
+                            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 px-1.5 py-0.2 rounded mt-1 font-mono uppercase">
                               <TrendingDown size={10} /> Lowest Offer
                             </span>
                           )}
@@ -586,23 +586,23 @@ export default function QuotationsPage() {
 
                   {/* Award Action Rows */}
                   <tr>
-                    <td className="p-4 font-bold text-slate-400 text-xs font-mono">Award Contract</td>
+                    <td className="p-4 font-bold text-[var(--text-secondary)] text-xs font-mono">Award Contract</td>
                     {rfqDetail.quotations.map((quo, idx) => (
                       <td key={idx} className="p-4 text-center border-l border-[var(--border-default)]">
                         {quo.status === 'awarded' ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 text-xs font-bold font-mono">
+                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 text-xs font-bold font-mono">
                             <CheckCircle2 size={14} /> Awarded
                           </span>
                         ) : quo.status === 'rejected' ? (
-                          <span className="text-xs text-slate-550 font-semibold italic">Rejected</span>
+                          <span className="text-xs text-[var(--text-muted)] font-semibold italic">Rejected</span>
                         ) : (
                           <button
                             onClick={() => handleAwardContract(quo)}
                             disabled={awardedVendor !== null || actionLoading}
                             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all border cursor-pointer font-mono ${
                               awardedVendor !== null || actionLoading
-                                ? 'bg-slate-800 border-slate-700 text-slate-500 pointer-events-none'
-                                : 'bg-[var(--bg-subtle)] hover:bg-[var(--accent)] border-[var(--border-strong)] hover:border-[var(--accent)] text-slate-300 hover:text-white'
+                                ? 'bg-[var(--bg-subtle)] border-[var(--border-default)] text-[var(--text-muted)] pointer-events-none'
+                                : 'bg-[var(--bg-subtle)] hover:bg-[var(--accent)] border-[var(--border-strong)] hover:border-[var(--accent)] text-[var(--text-secondary)] hover:text-white'
                             }`}
                           >
                             {actionLoading ? (

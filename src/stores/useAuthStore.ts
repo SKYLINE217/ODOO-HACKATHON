@@ -8,6 +8,7 @@ export interface UserProfile {
   role: 'admin' | 'procurement_officer' | 'manager' | 'vendor'
   avatar_url: string | null
   department: string | null
+  phone?: string | null
 }
 
 interface AuthState {

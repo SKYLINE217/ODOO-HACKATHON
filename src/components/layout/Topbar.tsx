@@ -5,6 +5,7 @@ import { Bell, Search, CheckCircle2, Clock, AlertCircle, User, Settings, LogOut,
 import { useAuth } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSearchStore } from '@/stores/useSearchStore'
 
 interface Notification {
   id: string
@@ -18,6 +19,7 @@ interface Notification {
 export default function Topbar() {
   const { user, loading, logout } = useAuth()
   const router = useRouter()
+  const { searchTerm, setSearchTerm } = useSearchStore()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
@@ -74,6 +76,8 @@ export default function Topbar() {
         <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
         <input
           placeholder="Search vendors, RFQs, orders…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
           style={{
             width: '100%', height: '36px',
             background: 'var(--bg-elevated)',

@@ -16,6 +16,7 @@ import {
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { swr, cacheInvalidate } from '@/lib/cache'
+import { useSearchStore } from '@/stores/useSearchStore'
 
 interface Vendor {
   id: string
@@ -88,7 +89,12 @@ export default function VendorsPage() {
   
   const [vendors, setVendors] = useState<Vendor[]>(fallbackVendors)
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
+  
+  useEffect(() => {
+    return () => clearSearch()
+  }, [clearSearch])
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [dbNotice, setDbNotice] = useState<string | null>(null)
@@ -212,10 +218,10 @@ export default function VendorsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Vendor Management</h2>
-          <p className="text-slate-500 text-sm mt-1">Register, monitor compliance, and track performance of all vendors.</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight">Vendor Management</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Register, monitor compliance, and track performance of all vendors.</p>
           {dbNotice && (
-            <span className="inline-flex mt-2 text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded border border-indigo-100">
+            <span className="inline-flex mt-2 text-[10px] font-bold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/25">
               {dbNotice}
             </span>
           )}
@@ -225,7 +231,7 @@ export default function VendorsPage() {
         {(user?.role === 'admin' || user?.role === 'procurement_officer') && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold shadow-lg shadow-indigo-600/10 transition-all cursor-pointer self-start sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded-lg text-sm font-semibold shadow-lg transition-all cursor-pointer self-start sm:self-auto"
           >
             <Plus size={16} />
             Register Vendor
@@ -234,32 +240,32 @@ export default function VendorsPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[var(--bg-surface)] border border-[var(--border-default)] p-4 rounded-xl shadow-sm">
         <div className="relative w-full md:w-96 group">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+            <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--accent)] transition-colors" />
           </span>
           <input
             type="text"
             placeholder="Search by company, contact, email..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all"
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-full md:w-auto">
-            <Filter size={16} className="text-slate-500" />
+          <div className="flex items-center gap-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 w-full md:w-auto">
+            <Filter size={16} className="text-[var(--text-secondary)]" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent text-sm text-slate-600 focus:outline-none cursor-pointer w-full font-medium"
+              className="bg-transparent text-sm text-[var(--text-secondary)] focus:outline-none cursor-pointer w-full font-medium"
             >
-              <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending Verification</option>
-              <option value="suspended">Suspended</option>
-              <option value="blacklisted">Blacklisted</option>
+              <option value="all" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">All Statuses</option>
+              <option value="active" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Active</option>
+              <option value="pending" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Pending Verification</option>
+              <option value="suspended" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Suspended</option>
+              <option value="blacklisted" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Blacklisted</option>
             </select>
           </div>
         </div>
@@ -268,106 +274,106 @@ export default function VendorsPage() {
       {/* Add Vendor Form (Modal) */}
       {showAddForm && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
           onClick={(e) => { if (e.target === e.currentTarget) setShowAddForm(false) }}
         >
-          <div className="bg-white border border-slate-200 rounded-xl max-w-lg w-full shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
-            <h3 className="text-lg font-bold text-slate-800 mb-2">Register New Vendor</h3>
-            <p className="text-xs text-slate-500 mb-4">Enter compliance and contact information to register this vendor.</p>
+          <div className="bg-[var(--bg-surface)] border border-[var(--border-strong)] rounded-xl max-w-lg w-full shadow-2xl p-6 relative animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-[var(--text-primary)] mb-2 font-display">Register New Vendor</h3>
+            <p className="text-xs text-[var(--text-secondary)] mb-4">Enter compliance and contact information to register this vendor.</p>
 
             {formError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold rounded-lg">
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/25 text-rose-400 text-xs font-semibold rounded-lg">
                 {formError}
               </div>
             )}
             
             <form onSubmit={handleAddVendor} className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Company Name</label>
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">Company Name</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Apex Tech Solutions"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Category</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">Category</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                   >
-                    <option>IT & Software</option>
-                    <option>Logistics</option>
-                    <option>Office Supplies</option>
-                    <option>Maintenance</option>
-                    <option>Marketing</option>
+                    <option className="bg-[var(--bg-surface)] text-[var(--text-primary)]">IT & Software</option>
+                    <option className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Logistics</option>
+                    <option className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Office Supplies</option>
+                    <option className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Maintenance</option>
+                    <option className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Marketing</option>
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">GST Number</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">GST Number</label>
                   <input
                     type="text"
                     placeholder="e.g. 27AAAAA1111A1Z1"
                     value={gstNumber}
                     onChange={(e) => setGstNumber(e.target.value)}
-                    className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Contact Person</label>
+                <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">Contact Person</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. John Doe"
                   value={contactPerson}
                   onChange={(e) => setContactPerson(e.target.value)}
-                  className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                  className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Email</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">Email</label>
                   <input
                     type="email"
                     required
                     placeholder="e.g. contact@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wide">Phone</label>
+                  <label className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wide">Phone</label>
                   <input
                     type="text"
                     placeholder="e.g. +91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    className="w-full mt-1.5 px-3.5 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                    className="w-full mt-1.5 px-3.5 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] text-[var(--text-primary)] placeholder-[var(--text-muted)] rounded-lg text-sm focus:outline-none focus:border-[var(--accent)] transition-all"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">
+              <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border-default)]">
                 <button
                   type="button"
                   onClick={() => setShowAddForm(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-semibold hover:bg-slate-50 transition-colors"
+                  className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] text-[var(--text-secondary)] rounded-lg text-sm font-semibold hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors"
+                  className="px-4 py-2 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded-lg text-sm font-semibold transition-colors cursor-pointer"
                 >
                   Submit
                 </button>
@@ -385,12 +391,12 @@ export default function VendorsPage() {
               {/* Profile/Category Title */}
               <div className="flex items-start justify-between">
                 <div className="flex gap-3 items-center">
-                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-slate-400">
+                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-[var(--text-muted)]">
                     <Building size={20} />
                   </div>
                   <div>
-                    <h4 className="font-bold text-white text-base leading-snug font-display">{vendor.company_name}</h4>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-500/10 text-slate-350 border border-slate-500/20 mt-1 font-mono">
+                    <h4 className="font-bold text-[var(--text-primary)] text-base leading-snug font-display">{vendor.company_name}</h4>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[var(--bg-subtle)] text-[var(--text-secondary)] border border-[var(--border-default)] mt-1 font-mono">
                       {vendor.category}
                     </span>
                   </div>
@@ -411,18 +417,18 @@ export default function VendorsPage() {
               {/* Contact Info */}
               <div className="grid grid-cols-2 gap-4 text-xs font-mono">
                 <div className="space-y-1">
-                  <p className="text-slate-500 font-semibold uppercase tracking-wider text-[9px]">Contact</p>
-                  <p className="font-bold text-slate-200">{vendor.contact_person}</p>
+                  <p className="text-[var(--text-muted)] font-semibold uppercase tracking-wider text-[9px]">Contact</p>
+                  <p className="font-bold text-[var(--text-primary)]">{vendor.contact_person}</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-slate-500 font-semibold uppercase tracking-wider text-[9px]">GSTIN</p>
-                  <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-slate-300 border border-[var(--border-strong)]">{vendor.gst_number}</code>
+                  <p className="text-[var(--text-muted)] font-semibold uppercase tracking-wider text-[9px]">GSTIN</p>
+                  <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-[var(--text-secondary)] border border-[var(--border-strong)]">{vendor.gst_number}</code>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-2 text-xs text-slate-400 font-mono">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 text-xs text-[var(--text-secondary)] font-mono">
                 <span className="flex items-center gap-1.5"><Mail size={14} /> {vendor.email}</span>
-                <span className="hidden sm:inline text-slate-650">|</span>
+                <span className="hidden sm:inline text-[var(--text-muted)]">|</span>
                 <span className="flex items-center gap-1.5"><Phone size={14} /> {vendor.phone}</span>
               </div>
             </div>
@@ -431,20 +437,20 @@ export default function VendorsPage() {
             <div className="md:w-36 flex flex-row md:flex-col justify-between md:justify-center items-center md:border-l border-[var(--border-default)] pl-0 md:pl-6 pt-4 md:pt-0 gap-4">
               <div className="flex flex-row md:flex-col gap-4 w-full justify-around md:justify-center">
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Rating</p>
+                  <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Rating</p>
                   <div className="flex items-center gap-1 justify-center mt-1 text-amber-400 font-bold text-base f1-numbers">
                     <Star size={14} fill="currentColor" />
                     <span>{vendor.rating > 0 ? vendor.rating.toFixed(1) : 'N/A'}</span>
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Orders</p>
-                  <span className="text-white font-extrabold text-base block mt-0.5 f1-numbers">{vendor.total_orders}</span>
+                  <p className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider">Orders</p>
+                  <span className="text-[var(--text-primary)] font-extrabold text-base block mt-0.5 f1-numbers">{vendor.total_orders}</span>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedVendor(vendor)}
-                className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+                className="w-full inline-flex items-center justify-center gap-1 px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
               >
                 View Profile
               </button>
@@ -465,97 +471,97 @@ export default function VendorsPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-300 bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-default)] font-mono">
+                    <span className="text-[10px] font-bold text-[var(--text-secondary)] bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-default)] font-mono">
                       ID: {selectedVendor.id}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono font-medium">{selectedVendor.category}</span>
+                    <span className="text-xs text-[var(--text-muted)] font-mono font-medium">{selectedVendor.category}</span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mt-1 font-display">{selectedVendor.company_name}</h3>
+                  <h3 className="text-lg font-bold text-[var(--text-primary)] mt-1 font-display">{selectedVendor.company_name}</h3>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedVendor(null)}
-                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
               >
                 ✕ Close
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-[var(--text-secondary)] custom-scrollbar">
               {/* Profile stats & reliability */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Rating Score</span>
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Rating Score</span>
                   <div className="flex items-center gap-1 justify-center mt-1 text-amber-400 font-bold text-base f1-numbers">
                     <Star size={14} fill="currentColor" />
                     <span>{selectedVendor.rating > 0 ? selectedVendor.rating.toFixed(1) : 'N/A'}</span>
                   </div>
                 </div>
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Completed Orders</span>
-                  <span className="font-extrabold text-white text-base block mt-1 f1-numbers">{selectedVendor.total_orders}</span>
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Completed Orders</span>
+                  <span className="font-extrabold text-[var(--text-primary)] text-base block mt-1 f1-numbers">{selectedVendor.total_orders}</span>
                 </div>
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Fulfillment Rate</span>
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Fulfillment Rate</span>
                   <span className="font-bold text-emerald-400 text-sm mt-1.5 block font-mono">98.6%</span>
                 </div>
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-3 rounded-lg text-center">
-                  <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Avg. Response Time</span>
+                  <span className="text-[9px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Avg. Response Time</span>
                   <span className="font-bold text-indigo-400 text-sm mt-1.5 block font-mono">1.2 Days</span>
                 </div>
               </div>
 
               {/* Contact Information block */}
               <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-4 rounded-lg space-y-3">
-                <h4 className="text-white font-bold text-xs uppercase tracking-wider border-b border-[var(--border-default)] pb-2 mb-2">Corporate Information</h4>
+                <h4 className="text-[var(--text-primary)] font-bold text-xs uppercase tracking-wider border-b border-[var(--border-default)] pb-2 mb-2">Corporate Information</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
                   <div>
-                    <span className="text-slate-500 block font-semibold">Primary Representative:</span>
-                    <span className="text-slate-200 font-medium block mt-0.5">{selectedVendor.contact_person}</span>
+                    <span className="text-[var(--text-muted)] block font-semibold">Primary Representative:</span>
+                    <span className="text-[var(--text-primary)] font-medium block mt-0.5">{selectedVendor.contact_person}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-semibold">GSTIN / Registration:</span>
-                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.gst_number}</span>
+                    <span className="text-[var(--text-muted)] block font-semibold">GSTIN / Registration:</span>
+                    <span className="text-[var(--text-primary)] font-mono block mt-0.5">{selectedVendor.gst_number}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-semibold">Business Email:</span>
-                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.email}</span>
+                    <span className="text-[var(--text-muted)] block font-semibold">Business Email:</span>
+                    <span className="text-[var(--text-primary)] font-mono block mt-0.5">{selectedVendor.email}</span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block font-semibold">Corporate Phone:</span>
-                    <span className="text-slate-200 font-mono block mt-0.5">{selectedVendor.phone}</span>
+                    <span className="text-[var(--text-muted)] block font-semibold">Corporate Phone:</span>
+                    <span className="text-[var(--text-primary)] font-mono block mt-0.5">{selectedVendor.phone}</span>
                   </div>
                 </div>
                 <div className="pt-2 text-xs border-t border-[var(--border-default)]">
-                  <span className="text-slate-500 block font-semibold">Registered Headquarters Office:</span>
-                  <p className="text-slate-350 mt-1">104, Tech Park Boulevard, Sector 4, Bangalore, Karnataka, 560001</p>
+                  <span className="text-[var(--text-muted)] block font-semibold">Registered Headquarters Office:</span>
+                  <p className="text-[var(--text-secondary)] mt-1">104, Tech Park Boulevard, Sector 4, Bangalore, Karnataka, 560001</p>
                 </div>
               </div>
 
               {/* Recent Bids and Activity */}
               <div>
-                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Associated Procurements & Active Bids</h4>
+                <h4 className="font-bold text-[var(--text-primary)] text-xs uppercase tracking-wider mb-2.5">Associated Procurements & Active Bids</h4>
                 <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-[var(--text-muted)]">
                         <th className="p-3 font-semibold">Requisition Ref</th>
                         <th className="p-3 font-semibold">Title</th>
                         <th className="p-3 font-semibold">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                      <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                         <td className="p-3 font-mono text-indigo-400">RFQ-2026-00042</td>
-                        <td className="p-3 text-slate-300">Server Hardware Upgrade</td>
+                        <td className="p-3 text-[var(--text-secondary)]">Server Hardware Upgrade</td>
                         <td className="p-3">
                           <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 px-2 py-0.5 rounded font-mono">SUBMITTED</span>
                         </td>
                       </tr>
-                      <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                      <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                         <td className="p-3 font-mono text-indigo-400">RFQ-2026-00043</td>
-                        <td className="p-3 text-slate-300">Office Ergonomic Chairs</td>
+                        <td className="p-3 text-[var(--text-secondary)]">Office Ergonomic Chairs</td>
                         <td className="p-3">
                           <span className="text-[10px] bg-amber-500/10 text-amber-400 border border-amber-500/25 px-2 py-0.5 rounded font-mono">DRAFT BID</span>
                         </td>
@@ -568,12 +574,12 @@ export default function VendorsPage() {
 
             {/* Footer */}
             <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-between gap-3 items-center">
-              <span className="text-[10px] text-slate-500 font-mono">
+              <span className="text-[10px] text-[var(--text-muted)] font-mono">
                 Verified Vendor Partner since 2024
               </span>
               <button 
                 onClick={() => setSelectedVendor(null)}
-                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 Close Profile
               </button>

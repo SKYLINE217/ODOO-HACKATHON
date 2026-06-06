@@ -19,8 +19,8 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight font-display">Reports & Analytics</h2>
-          <p className="text-slate-400 text-sm mt-1">Generate spending charts, track performance scorecards, and export audits.</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight font-display">Reports & Analytics</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Generate spending charts, track performance scorecards, and export audits.</p>
         </div>
         <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-[var(--accent)] hover:bg-[var(--accent-hover)] text-white rounded-lg text-sm font-semibold shadow-lg transition-all cursor-pointer">
           <Download size={16} /> Export Consolidated PDF
@@ -34,8 +34,8 @@ export default function ReportsPage() {
             <IndianRupee size={22} />
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">YTD Procurement Spend</span>
-            <span className="font-extrabold text-white text-lg block mt-0.5 f1-numbers">{"\u20B9"}48,50,000</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">YTD Procurement Spend</span>
+            <span className="font-extrabold text-[var(--text-primary)] text-lg block mt-0.5 f1-numbers">{"\u20B9"}48,50,000</span>
           </div>
         </div>
 
@@ -44,8 +44,8 @@ export default function ReportsPage() {
             <Users size={22} />
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Avg. Bid Response Count</span>
-            <span className="font-extrabold text-white text-lg block mt-0.5 f1-numbers">3.8 bidders</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Avg. Bid Response Count</span>
+            <span className="font-extrabold text-[var(--text-primary)] text-lg block mt-0.5 f1-numbers">3.8 bidders</span>
           </div>
         </div>
 
@@ -54,8 +54,8 @@ export default function ReportsPage() {
             <ShieldCheck size={22} />
           </div>
           <div>
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Compliance Rating</span>
-            <span className="font-extrabold text-white text-lg block mt-0.5 f1-numbers">94.2%</span>
+            <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Compliance Rating</span>
+            <span className="font-extrabold text-[var(--text-primary)] text-lg block mt-0.5 f1-numbers">94.2%</span>
           </div>
         </div>
       </div>
@@ -64,11 +64,11 @@ export default function ReportsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Spend by category chart */}
         <div className="card">
-          <h3 className="font-bold text-white mb-6 font-display">Spending Distribution by Category</h3>
+          <h3 className="font-bold text-[var(--text-primary)] mb-6 font-display">Spending Distribution by Category</h3>
           
           <div className="space-y-6">
             <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-350 mb-1.5">
+              <div className="flex justify-between text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
                 <span>IT & Software</span>
                 <span className="f1-numbers">{"\u20B9"}8,14,200 (57%)</span>
               </div>
@@ -78,7 +78,7 @@ export default function ReportsPage() {
             </div>
 
             <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-350 mb-1.5">
+              <div className="flex justify-between text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
                 <span>Office supplies</span>
                 <span className="f1-numbers">{"\u20B9"}3,30,400 (23%)</span>
               </div>
@@ -88,7 +88,7 @@ export default function ReportsPage() {
             </div>
 
             <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-350 mb-1.5">
+              <div className="flex justify-between text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
                 <span>Logistics</span>
                 <span className="f1-numbers">{"\u20B9"}1,85,000 (13%)</span>
               </div>
@@ -98,7 +98,7 @@ export default function ReportsPage() {
             </div>
 
             <div>
-              <div className="flex justify-between text-xs font-semibold text-slate-350 mb-1.5">
+              <div className="flex justify-between text-xs font-semibold text-[var(--text-secondary)] mb-1.5">
                 <span>Maintenance</span>
                 <span className="f1-numbers">{"\u20B9"}99,400 (7%)</span>
               </div>
@@ -111,7 +111,7 @@ export default function ReportsPage() {
 
         {/* Bid lead time trend */}
         <div className="card">
-          <h3 className="font-bold text-white mb-6 font-display">Average Bid Response Times (Days)</h3>
+          <h3 className="font-bold text-[var(--text-primary)] mb-6 font-display">Average Bid Response Times (Days)</h3>
           
           {/* Custom SVG Bar Chart */}
           <div className="h-48 flex items-end justify-between px-4 pt-4 border-b border-[var(--border-default)] relative">
@@ -124,31 +124,31 @@ export default function ReportsPage() {
               <div className="w-8 bg-indigo-500 hover:bg-indigo-600 rounded-t transition-all" style={{ height: '120px' }}>
                 <span className="text-[10px] font-bold text-white text-center block pt-1.5 f1-numbers">6.2d</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold f1-numbers">Q1</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-semibold f1-numbers">Q1</span>
             </div>
 
             <div className="flex flex-col items-center gap-2 w-12">
               <div className="w-8 bg-indigo-500 hover:bg-indigo-600 rounded-t transition-all" style={{ height: '98px' }}>
                 <span className="text-[10px] font-bold text-white text-center block pt-1.5 f1-numbers">5.1d</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold f1-numbers">Q2</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-semibold f1-numbers">Q2</span>
             </div>
 
             <div className="flex flex-col items-center gap-2 w-12">
               <div className="w-8 bg-indigo-500 hover:bg-indigo-600 rounded-t transition-all" style={{ height: '70px' }}>
                 <span className="text-[10px] font-bold text-white text-center block pt-1.5 f1-numbers">3.8d</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold f1-numbers">Q3</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-semibold f1-numbers">Q3</span>
             </div>
 
             <div className="flex flex-col items-center gap-2 w-12">
               <div className="w-8 bg-emerald-500 hover:bg-emerald-600 rounded-t transition-all" style={{ height: '54px' }}>
                 <span className="text-[10px] font-bold text-white text-center block pt-1.5 f1-numbers">2.9d</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-semibold f1-numbers">Q4</span>
+              <span className="text-[10px] text-[var(--text-muted)] font-semibold f1-numbers">Q4</span>
             </div>
           </div>
-          <p className="text-xs text-slate-400 mt-4 font-semibold text-center flex items-center justify-center gap-1.5">
+          <p className="text-xs text-[var(--text-secondary)] mt-4 font-semibold text-center flex items-center justify-center gap-1.5">
             <TrendingUp size={14} className="text-emerald-500" /> Response speed improved by 53% YoY.
           </p>
         </div>

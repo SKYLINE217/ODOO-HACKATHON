@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { useSearchStore } from '@/stores/useSearchStore'
 
 interface ActivityLog {
   id: string
@@ -73,7 +74,11 @@ const supabase = createClient()
 
 export default function ActivityLogPage() {
   const [logs, setLogs] = useState<ActivityLog[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
+  
+  useEffect(() => {
+    return () => clearSearch()
+  }, [clearSearch])
   
   const [isDbMode, setIsDbMode] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -146,27 +151,27 @@ export default function ActivityLogPage() {
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-white tracking-tight font-display">Audit & Activity Logs</h2>
-        <p className="text-slate-400 text-sm mt-1">Full audit trail tracking entity state alterations, creator details, and timestamps.</p>
+        <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight font-display">Audit & Activity Logs</h2>
+        <p className="text-[var(--text-secondary)] text-sm mt-1">Full audit trail tracking entity state alterations, creator details, and timestamps.</p>
       </div>
 
       {/* Search Bar */}
       <div className="relative w-full max-w-md group">
         <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-          <Search size={18} className="text-slate-450 group-focus-within:text-[var(--accent)] transition-colors" />
+          <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--accent)] transition-colors" />
         </span>
         <input
           type="text"
           placeholder="Filter audit logs..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:border-[var(--accent)] transition-all text-white font-mono"
+          className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-sm placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all text-[var(--text-primary)] font-mono"
         />
       </div>
 
       {/* Audit Log Timeline */}
       <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl shadow-sm overflow-hidden">
-        <div className="p-4 bg-[var(--bg-elevated)] border-b border-[var(--border-default)] flex items-center gap-2 text-slate-400">
+        <div className="p-4 bg-[var(--bg-elevated)] border-b border-[var(--border-default)] flex items-center gap-2 text-[var(--text-secondary)]">
           <Terminal size={16} />
           <span className="text-xs font-bold uppercase tracking-wider font-mono">System Event Stream</span>
         </div>
@@ -175,27 +180,27 @@ export default function ActivityLogPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
-              <span className="text-xs text-slate-400 font-semibold font-mono">Loading audit logs...</span>
+              <span className="text-xs text-[var(--text-secondary)] font-semibold font-mono">Loading audit logs...</span>
             </div>
           ) : filteredLogs.length > 0 ? (
             filteredLogs.map((log) => (
-              <div key={log.id} className="p-6 hover:bg-white/5 transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div key={log.id} className="p-6 hover:bg-[var(--bg-subtle)] transition-colors flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex gap-4 items-start">
-                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] text-slate-400 rounded-lg shrink-0">
+                  <div className="p-2.5 bg-[var(--bg-subtle)] border border-[var(--border-strong)] text-[var(--text-muted)] rounded-lg shrink-0">
                     <Activity size={18} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-white">{log.description}</p>
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-400 font-mono">
+                    <p className="text-sm font-semibold text-[var(--text-primary)]">{log.description}</p>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-[var(--text-secondary)] font-mono">
                       <span className="flex items-center gap-1.5"><User size={13} /> {log.performed_by}</span>
-                      <span className="hidden sm:inline text-slate-700">|</span>
-                      <span>IP: <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-slate-350 border border-[var(--border-strong)]">{log.ip_address}</code></span>
+                      <span className="hidden sm:inline text-[var(--border-default)]">|</span>
+                      <span>IP: <code className="px-1.5 py-0.5 bg-[var(--bg-subtle)] rounded text-[var(--text-secondary)] border border-[var(--border-strong)]">{log.ip_address}</code></span>
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right shrink-0 font-mono">
-                  <span className="text-xs text-slate-500 block font-medium">{log.performed_at}</span>
+                  <span className="text-xs text-[var(--text-muted)] block font-medium">{log.performed_at}</span>
                   <span className="inline-flex mt-1 text-[9px] font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/25 px-1.5 py-0.5 rounded uppercase">
                     {log.action}
                   </span>
@@ -203,7 +208,7 @@ export default function ActivityLogPage() {
               </div>
             ))
           ) : (
-            <div className="p-12 text-center text-sm text-slate-400 font-mono">No logs found matching filter</div>
+            <div className="p-12 text-center text-sm text-[var(--text-muted)] font-mono">No logs found matching filter</div>
           )}
         </div>
       </div>

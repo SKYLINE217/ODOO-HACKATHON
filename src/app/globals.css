@@ -4,43 +4,43 @@
 /* ── VendorBridge Design System Tokens ─────────────────── */
 :root {
   /* Backgrounds */
-  --bg-base:        #0C0C12;
-  --bg-surface:     #15151E;
-  --bg-elevated:    #1F1F2A;
-  --bg-subtle:      #252535;
+  --bg-base:        #F4F4F6;
+  --bg-surface:     #FFFFFF;
+  --bg-elevated:    #FFFFFF;
+  --bg-subtle:      #F0F1F5;
 
   /* Borders */
-  --border-default: #252530;
-  --border-strong:  #353545;
+  --border-default: #E2E3E8;
+  --border-strong:  #CDCFD6;
   --border-accent:  #E10600;
 
   /* Text */
-  --text-primary:   #FFFFFF;
-  --text-secondary: #9494A0;
-  --text-muted:     #575765;
+  --text-primary:   #15151E;
+  --text-secondary: #5C5E69;
+  --text-muted:     #8F919E;
   --text-inverse:   #FFFFFF;
 
   /* Accent — F1 Red */
   --accent:         #E10600;
   --accent-hover:   #B80500;
-  --accent-subtle:  rgba(225, 6, 0, 0.08);
-  --accent-glow:    rgba(225, 6, 0, 0.15);
+  --accent-subtle:  rgba(225, 6, 0, 0.05);
+  --accent-glow:    rgba(225, 6, 0, 0.1);
 
   /* Semantic */
-  --success:        #00D26A;
-  --success-subtle: rgba(0, 210, 106, 0.08);
-  --warning:        #FF9F0A;
-  --warning-subtle: rgba(255, 159, 10, 0.08);
-  --danger:         #EF4444;
-  --danger-subtle:  rgba(239, 68, 68, 0.08);
-  --info:           #3B82F6;
-  --info-subtle:    rgba(59, 130, 246, 0.08);
+  --success:        #00B85C;
+  --success-subtle: rgba(0, 184, 92, 0.06);
+  --warning:        #FF9500;
+  --warning-subtle: rgba(255, 149, 0, 0.06);
+  --danger:         #FF3B30;
+  --danger-subtle:  rgba(255, 59, 48, 0.06);
+  --info:           #007AFF;
+  --info-subtle:    rgba(0, 122, 255, 0.06);
 
   /* Shadows */
-  --shadow-sm:     0 1px 3px rgba(0,0,0,0.5);
-  --shadow-md:     0 4px 20px rgba(0,0,0,0.7);
-  --shadow-lg:     0 12px 48px rgba(0,0,0,0.8);
-  --shadow-accent: 0 0 24px rgba(225, 6, 0, 0.12);
+  --shadow-sm:     0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:     0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:     0 12px 32px rgba(0,0,0,0.08);
+  --shadow-accent: 0 0 20px rgba(225, 6, 0, 0.06);
 
   /* Fonts */
   --font-display: var(--font-rajdhani), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
@@ -49,13 +49,45 @@
   --font-numbers: var(--font-orbitron), var(--font-rajdhani), monospace;
 }
 
+/* ── Dark Mode Overrides ──────────────────────────────── */
+.dark-mode {
+  /* Backgrounds */
+  --bg-base:        #0A0A0F;
+  --bg-surface:     #121217;
+  --bg-elevated:    #181820;
+  --bg-subtle:      #1A1A22;
+
+  /* Borders */
+  --border-default: #23242C;
+  --border-strong:  #343644;
+  --border-accent:  #E10600;
+
+  /* Text */
+  --text-primary:   #F4F4F6;
+  --text-secondary: #9FA1AD;
+  --text-muted:     #6A6C7A;
+  --text-inverse:   #0A0A0F;
+
+  /* Accent Glow */
+  --accent-subtle:  rgba(225, 6, 0, 0.15);
+  --accent-glow:    rgba(225, 6, 0, 0.25);
+  
+  /* Shadows */
+  --shadow-sm:     0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md:     0 4px 16px rgba(0,0,0,0.3);
+  --shadow-lg:     0 12px 32px rgba(0,0,0,0.4);
+}
+
 /* ── Base Reset ───────────────────────────────────────── */
 *, *::before, *::after {
   box-sizing: border-box;
   transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html { scroll-behavior: smooth; }
+html { 
+  scroll-behavior: smooth;
+  transition: background-color 200ms ease, border-color 200ms ease, color 200ms ease;
+}
 
 body {
   background: var(--bg-base);
@@ -207,7 +239,7 @@ body {
 .card-hover:hover {
   border-color: var(--border-strong);
   border-left-color: var(--accent);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(225, 6, 0, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05), 0 0 12px rgba(225, 6, 0, 0.04);
   transform: translateY(-2px);
 }
 
@@ -250,3 +282,44 @@ body {
   letter-spacing: -0.01em;
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Compact Mode Overrides ───────────────────────────── */
+.compact-mode .card {
+  padding: 12px 16px !important;
+}
+.compact-mode .py-12 {
+  padding-top: 1.5rem !important;
+  padding-bottom: 1.5rem !important;
+}
+.compact-mode .py-8 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+.compact-mode .p-6 {
+  padding: 1rem !important;
+}
+.compact-mode .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 1.25rem !important;
+}
+.compact-mode .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.85rem !important;
+}
+.compact-mode .gap-6 {
+  gap: 1rem !important;
+}
+.compact-mode .gap-8 {
+  gap: 1.25rem !important;
+}
+.compact-mode .tbl-row td {
+  padding: 8px 12px !important;
+}
+.compact-mode .tbl-head th {
+  padding: 8px 12px !important;
+}
+.compact-mode .space-y-5 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.75rem !important;
+}
+.compact-mode .space-y-4 > :not([hidden]) ~ :not([hidden]) {
+  margin-top: 0.5rem !important;
+}
+

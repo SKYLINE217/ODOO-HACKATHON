@@ -2,6 +2,20 @@ import { INITIAL_SEEDS } from './seeds';
 
 function getLocalTable(tableName: string): any[] {
   if (typeof window === 'undefined') return [];
+  
+  // Database version check to auto-clear outdated cache
+  const CURRENT_DB_VERSION = 'v2_expanded';
+  const savedVersion = localStorage.getItem('vb_db_seed_version');
+  if (savedVersion !== CURRENT_DB_VERSION) {
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('vb_db_')) {
+        localStorage.removeItem(key);
+      }
+    }
+    localStorage.setItem('vb_db_seed_version', CURRENT_DB_VERSION);
+  }
+
   const stored = localStorage.getItem(`vb_db_${tableName}`);
   if (stored) {
     try {

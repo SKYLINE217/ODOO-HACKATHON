@@ -16,6 +16,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { useSearchStore } from '@/stores/useSearchStore'
 
 interface PurchaseOrder {
   id: string
@@ -61,7 +62,12 @@ const supabase = createClient()
 
 export default function PurchaseOrdersPage() {
   const [pos, setPos] = useState<PurchaseOrder[]>([])
-  const [searchTerm, setSearchTerm] = useState('')
+  const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
+  
+  useEffect(() => {
+    return () => clearSearch()
+  }, [clearSearch])
+
   const [statusFilter, setStatusFilter] = useState('all')
   const [selectedPo, setSelectedPo] = useState<PurchaseOrder | null>(null)
   
@@ -146,8 +152,8 @@ export default function PurchaseOrdersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight font-display">Purchase Orders (POs)</h2>
-          <p className="text-slate-400 text-sm mt-1">Track issued POs, confirm vendor acknowledgements, and manage deliveries.</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight font-display">Purchase Orders (POs)</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Track issued POs, confirm vendor acknowledgements, and manage deliveries.</p>
         </div>
       </div>
 
@@ -155,30 +161,30 @@ export default function PurchaseOrdersPage() {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[var(--bg-surface)] border border-[var(--border-default)] p-4 rounded-xl shadow-sm">
         <div className="relative w-full md:w-96 group">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search size={18} className="text-slate-500 group-focus-within:text-[var(--accent)] transition-colors" />
+            <Search size={18} className="text-[var(--text-muted)] group-focus-within:text-[var(--accent)] transition-colors" />
           </span>
           <input
             type="text"
             placeholder="Search PO number, vendor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg text-sm placeholder-slate-500 focus:outline-none focus:border-[var(--accent)] transition-all text-white"
+            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg text-sm text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[var(--accent)] transition-all"
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
           <div className="flex items-center gap-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 w-full md:w-auto">
-            <Filter size={16} className="text-slate-400" />
+            <Filter size={16} className="text-[var(--text-secondary)]" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent text-sm text-slate-300 focus:outline-none cursor-pointer w-full font-medium"
+              className="bg-transparent text-sm text-[var(--text-secondary)] focus:outline-none cursor-pointer w-full font-medium"
             >
-              <option value="all" className="bg-[var(--bg-subtle)] text-white">All POs</option>
-              <option value="draft" className="bg-[var(--bg-subtle)] text-white">Draft</option>
-              <option value="issued" className="bg-[var(--bg-subtle)] text-white">Issued</option>
-              <option value="acknowledged" className="bg-[var(--bg-subtle)] text-white">Acknowledged</option>
-              <option value="fulfilled" className="bg-[var(--bg-subtle)] text-white">Fulfilled</option>
-              <option value="cancelled" className="bg-[var(--bg-subtle)] text-white">Cancelled</option>
+              <option value="all" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">All POs</option>
+              <option value="draft" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Draft</option>
+              <option value="issued" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Issued</option>
+              <option value="acknowledged" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Acknowledged</option>
+              <option value="fulfilled" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Fulfilled</option>
+              <option value="cancelled" className="bg-[var(--bg-surface)] text-[var(--text-primary)]">Cancelled</option>
             </select>
           </div>
         </div>
@@ -187,13 +193,13 @@ export default function PurchaseOrdersPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
-          <span className="text-xs text-slate-400 font-semibold">Loading purchase orders...</span>
+          <span className="text-xs text-[var(--text-secondary)] font-semibold">Loading purchase orders...</span>
         </div>
       ) : filteredPos.length === 0 ? (
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
-          <ShoppingBag size={36} className="text-slate-650 mx-auto mb-3" />
-          <h4 className="font-bold text-white text-sm">No Purchase Orders Found</h4>
-          <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
+          <ShoppingBag size={36} className="text-[var(--text-muted)] mx-auto mb-3" />
+          <h4 className="font-bold text-[var(--text-primary)] text-sm">No Purchase Orders Found</h4>
+          <p className="text-[var(--text-secondary)] text-xs mt-1.5 max-w-sm mx-auto">
             There are no purchase orders matching your search or filters.
           </p>
         </div>
@@ -209,10 +215,10 @@ export default function PurchaseOrdersPage() {
                       <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/25 font-mono">
                         {po.po_number}
                       </span>
-                      <span className="text-xs text-slate-400 font-medium font-mono">Quote: {po.quotation_ref}</span>
+                      <span className="text-xs text-[var(--text-muted)] font-medium font-mono">Quote: {po.quotation_ref}</span>
                     </div>
-                    <h4 className="font-bold text-white text-lg leading-tight mt-1.5">{po.vendor_name}</h4>
-                    <p className="text-xs text-slate-400 mt-1">Issued on {po.issued_at}</p>
+                    <h4 className="font-bold text-[var(--text-primary)] text-lg leading-tight mt-1.5">{po.vendor_name}</h4>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">Issued on {po.issued_at}</p>
                   </div>
 
                   {/* Status */}
@@ -220,7 +226,7 @@ export default function PurchaseOrdersPage() {
                     po.status === 'fulfilled' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
                     po.status === 'issued' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/25' :
                     po.status === 'acknowledged' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/25' :
-                    'bg-slate-500/10 text-slate-400 border border-slate-500/25'
+                    'bg-slate-500/10 text-[var(--text-secondary)] border border-slate-500/25'
                   }`}>
                     {po.status === 'fulfilled' && <CheckCircle2 size={12} />}
                     {po.status === 'issued' && <Truck size={12} />}
@@ -230,9 +236,9 @@ export default function PurchaseOrdersPage() {
                 </div>
 
                 {/* Info footer */}
-                <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-2 border-t border-[var(--border-default)]">
-                  <span className="flex items-center gap-1.5"><Calendar size={14} /> Expected Delivery: <span className="font-semibold text-white">{po.delivery_date}</span></span>
-                  <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-bold text-white f1-numbers">{"\u20B9"}{po.total_amount.toLocaleString('en-IN')}</span></span>
+                <div className="flex flex-wrap gap-6 text-xs text-[var(--text-secondary)] pt-2 border-t border-[var(--border-default)]">
+                  <span className="flex items-center gap-1.5"><Calendar size={14} /> Expected Delivery: <span className="font-semibold text-[var(--text-primary)]">{po.delivery_date}</span></span>
+                  <span className="flex items-center gap-1.5"><IndianRupee size={14} /> Total Value: <span className="font-bold text-[var(--text-primary)] f1-numbers">{"\u20B9"}{po.total_amount.toLocaleString('en-IN')}</span></span>
                 </div>
               </div>
 
@@ -240,7 +246,7 @@ export default function PurchaseOrdersPage() {
               <div className="md:w-32 flex md:flex-col justify-end md:justify-center gap-2 md:border-l border-[var(--border-default)] pl-0 md:pl-6 pt-4 md:pt-0">
                 <button 
                   onClick={() => setSelectedPo(po)}
-                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+                  className="flex-1 md:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
                 >
                   View
                 </button>
@@ -264,51 +270,49 @@ export default function PurchaseOrdersPage() {
                   <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/25 font-mono">
                     {selectedPo.po_number}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">Quote: {selectedPo.quotation_ref}</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-mono">Quote: {selectedPo.quotation_ref}</span>
                 </div>
-                <h3 className="text-lg font-bold text-white mt-1.5 font-display">Purchase Order Details</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mt-1.5 font-display">Purchase Order Details</h3>
               </div>
               <button 
                 onClick={() => setSelectedPo(null)}
-                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
               >
                 ✕ Close
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-[var(--text-secondary)] custom-scrollbar">
               {/* Vendor & Status block */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Vendor Details</span>
-                  <h4 className="font-bold text-white text-base mt-1">{selectedPo.vendor_name}</h4>
-                  <p className="text-xs text-slate-400 mt-1">Payment Terms: Net 30 Days</p>
-                  <p className="text-xs text-slate-400">Shipping: Main Warehouse, Gate 3, Sector 4, Bangalore</p>
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Vendor Details</span>
+                  <h4 className="font-bold text-[var(--text-primary)] text-base mt-1">{selectedPo.vendor_name}</h4>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Payment Terms: Net 30 Days</p>
+                  <p className="text-xs text-[var(--text-secondary)]">Shipping: Main Warehouse, Gate 3, Sector 4, Bangalore</p>
                 </div>
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">PO Status</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">PO Status</span>
                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mt-1.5 ${
                       selectedPo.status === 'fulfilled' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
                       selectedPo.status === 'issued' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/25' :
                       selectedPo.status === 'acknowledged' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/25' :
-                      'bg-slate-500/10 text-slate-400 border border-slate-500/25'
+                      'bg-slate-500/10 text-[var(--text-secondary)] border border-slate-500/25'
                     }`}>
                       {selectedPo.status}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400">Issued Date: {selectedPo.issued_at || '2026-06-06'}</p>
+                  <p className="text-xs text-[var(--text-secondary)]">Issued Date: {selectedPo.issued_at || '2026-06-06'}</p>
                 </div>
-              </div>
-
-              {/* Items Table */}
+              </div>              {/* Items Table */}
               <div>
-                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Line Items Breakdown</h4>
+                <h4 className="font-bold text-[var(--text-primary)] text-xs uppercase tracking-wider mb-2.5">Line Items Breakdown</h4>
                 <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-[var(--text-muted)]">
                         <th className="p-3 font-semibold">Item & Description</th>
                         <th className="p-3 font-semibold text-right">Quantity</th>
                         <th className="p-3 font-semibold text-right">Unit Price</th>
@@ -319,35 +323,35 @@ export default function PurchaseOrdersPage() {
                       {/* Dynamically display dummy items based on PO total / category */}
                       {selectedPo.po_number.includes('00009') || selectedPo.quotation_ref.includes('00017') ? (
                         <>
-                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-white/5">
+                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-[var(--bg-subtle)]">
                             <td className="p-3">
-                              <p className="font-bold text-white">Rack Server 2U</p>
-                              <span className="text-[10px] text-slate-400">Xeon Silver, 64GB RAM, 2TB SSD</span>
+                              <p className="font-bold text-[var(--text-primary)]">Rack Server 2U</p>
+                              <span className="text-[10px] text-[var(--text-muted)]">Xeon Silver, 64GB RAM, 2TB SSD</span>
                             </td>
-                            <td className="p-3 text-right">8 Units</td>
-                            <td className="p-3 text-right f1-numbers">{"\u20B9"}3,43,750</td>
-                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}27,50,000</td>
+                            <td className="p-3 text-right text-[var(--text-secondary)]">8 Units</td>
+                            <td className="p-3 text-right f1-numbers text-[var(--text-secondary)]">{"\u20B9"}3,43,750</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}27,50,000</td>
                           </tr>
                         </>
                       ) : (
                         <>
-                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-white/5">
+                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-[var(--bg-subtle)]">
                             <td className="p-3">
-                              <p className="font-bold text-white">Heavy Steel Plate 12mm</p>
-                              <span className="text-[10px] text-slate-400">Grade Fe500 structural steel</span>
+                              <p className="font-bold text-[var(--text-primary)]">Heavy Steel Plate 12mm</p>
+                              <span className="text-[10px] text-[var(--text-muted)]">Grade Fe500 structural steel</span>
                             </td>
-                            <td className="p-3 text-right">45 Tons</td>
-                            <td className="p-3 text-right f1-numbers">{"\u20B9"}80,000</td>
-                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}36,0,000</td>
+                            <td className="p-3 text-right text-[var(--text-secondary)]">45 Tons</td>
+                            <td className="p-3 text-right f1-numbers text-[var(--text-secondary)]">{"\u20B9"}80,000</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}36,0,000</td>
                           </tr>
-                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-white/5">
+                          <tr className="border-b border-[var(--border-default)] last:border-0 hover:bg-[var(--bg-subtle)]">
                             <td className="p-3">
-                              <p className="font-bold text-white">Reinforcement Bars (16mm)</p>
-                              <span className="text-[10px] text-slate-400">Corrosion resistant steel bars</span>
+                              <p className="font-bold text-[var(--text-primary)]">Reinforcement Bars (16mm)</p>
+                              <span className="text-[10px] text-[var(--text-muted)]">Corrosion resistant steel bars</span>
                             </td>
-                            <td className="p-3 text-right">100 Units</td>
-                            <td className="p-3 text-right f1-numbers">{"\u20B9"}5,000</td>
-                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}5,00,000</td>
+                            <td className="p-3 text-right text-[var(--text-secondary)]">100 Units</td>
+                            <td className="p-3 text-right f1-numbers text-[var(--text-secondary)]">{"\u20B9"}5,000</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}5,00,000</td>
                           </tr>
                         </>
                       )}
@@ -359,16 +363,16 @@ export default function PurchaseOrdersPage() {
               {/* Financial Breakdowns */}
               <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg space-y-2.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400 font-medium">Subtotal</span>
-                  <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedPo.subtotal.toLocaleString('en-IN')}</span>
+                  <span className="text-[var(--text-secondary)] font-medium">Subtotal</span>
+                  <span className="font-semibold text-[var(--text-primary)] f1-numbers">{"\u20B9"}{selectedPo.subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400 font-medium">CGST / SGST (9% each) or IGST (18%)</span>
-                  <span className="font-semibold text-white f1-numbers">{"\u20B9"}{selectedPo.tax_amount.toLocaleString('en-IN')}</span>
+                  <span className="text-[var(--text-secondary)] font-medium">CGST / SGST (9% each) or IGST (18%)</span>
+                  <span className="font-semibold text-[var(--text-primary)] f1-numbers">{"\u20B9"}{selectedPo.tax_amount.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="h-px bg-[var(--border-default)] my-1.5" />
                 <div className="flex justify-between text-sm">
-                  <span className="text-white font-bold">Grand Total (INR)</span>
+                  <span className="text-[var(--text-primary)] font-bold">Grand Total (INR)</span>
                   <span className="font-extrabold text-[var(--accent)] f1-numbers">{"\u20B9"}{selectedPo.total_amount.toLocaleString('en-IN')}</span>
                 </div>
               </div>
@@ -383,7 +387,7 @@ export default function PurchaseOrdersPage() {
             <div className="p-4 bg-[var(--bg-elevated)] border-t border-[var(--border-default)] flex justify-end gap-3">
               <button 
                 onClick={() => setSelectedPo(null)}
-                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+                className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
               >
                 Close Details
               </button>

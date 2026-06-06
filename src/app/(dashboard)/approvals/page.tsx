@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
+import { useSearchStore } from '@/stores/useSearchStore'
 
 interface ApprovalRequest {
   id: string
@@ -67,6 +68,12 @@ const supabase = createClient()
 export default function ApprovalsPage() {
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([])
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null)
+  const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
+  
+  useEffect(() => {
+    return () => clearSearch()
+  }, [clearSearch])
+
   const [isDbMode, setIsDbMode] = useState(false)
   const [loading, setLoading] = useState(true)
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
@@ -172,6 +179,17 @@ export default function ApprovalsPage() {
 
   const pendingCount = approvals.filter(a => a.status === 'pending').length
 
+  const filteredApprovals = approvals.filter(req => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    return (
+      req.entity_number.toLowerCase().includes(search) ||
+      req.title.toLowerCase().includes(search) ||
+      req.requester.toLowerCase().includes(search) ||
+      (req.remarks || '').toLowerCase().includes(search)
+    )
+  })
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
 
@@ -197,10 +215,10 @@ export default function ApprovalsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-white tracking-tight font-display">Approvals Queue</h2>
-          <p className="text-slate-400 text-sm mt-1">Review requisition bids, purchase orders, and vendor invoices.</p>
+          <h2 className="text-2xl font-bold text-[var(--text-primary)] tracking-tight font-display">Approvals Queue</h2>
+          <p className="text-[var(--text-secondary)] text-sm mt-1">Review requisition bids, purchase orders, and vendor invoices.</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/25 self-start sm:self-auto">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-500 border border-amber-500/25 self-start sm:self-auto">
           <AlertCircle size={14} /> {pendingCount} Pending Approvals
         </span>
       </div>
@@ -208,19 +226,27 @@ export default function ApprovalsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
           <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
-          <span className="text-xs text-slate-400 font-semibold">Loading approvals queue...</span>
+          <span className="text-xs text-[var(--text-secondary)] font-semibold">Loading approvals queue...</span>
         </div>
       ) : approvals.length === 0 ? (
         <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
-          <ShieldAlert size={36} className="text-slate-650 mx-auto mb-3" />
-          <h4 className="font-bold text-white text-sm">Approvals Queue Empty</h4>
-          <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
+          <ShieldAlert size={36} className="text-slate-400 mx-auto mb-3" />
+          <h4 className="font-bold text-[var(--text-primary)] text-sm">Approvals Queue Empty</h4>
+          <p className="text-[var(--text-secondary)] text-xs mt-1.5 max-w-sm mx-auto">
             There are currently no active approval requests waiting for action.
+          </p>
+        </div>
+      ) : filteredApprovals.length === 0 ? (
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
+          <ShieldAlert size={36} className="text-slate-400 mx-auto mb-3" />
+          <h4 className="font-bold text-[var(--text-primary)] text-sm">No Results Found</h4>
+          <p className="text-[var(--text-secondary)] text-xs mt-1.5 max-w-sm mx-auto">
+            No approval requests match your search query: "{searchTerm}"
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6">
-          {approvals.map((req) => (
+          {filteredApprovals.map((req) => (
             <div key={req.id} className="card card-hover flex flex-col md:flex-row gap-6">
               <div className="flex-1 space-y-4">
                 {/* Type Badge & Date */}
@@ -233,7 +259,7 @@ export default function ApprovalsPage() {
                     }`}>
                       {req.entity_type.replace('_', ' ')}
                     </span>
-                    <span className="text-xs text-slate-400 font-mono">{req.entity_number}</span>
+                    <span className="text-xs text-[var(--text-secondary)] font-mono">{req.entity_number}</span>
                   </div>
                   
                   {/* Status indicator */}
@@ -248,13 +274,13 @@ export default function ApprovalsPage() {
 
                 {/* Title & Requester */}
                 <div>
-                  <h4 className="font-bold text-white text-base leading-snug">{req.title}</h4>
-                  <p className="text-xs text-slate-400 mt-1 leading-normal">
-                    Requested by <span className="font-semibold text-slate-200">{req.requester}</span> on {req.date_requested}
+                  <h4 className="font-bold text-[var(--text-primary)] text-base leading-snug">{req.title}</h4>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1 leading-normal">
+                    Requested by <span className="font-semibold text-[var(--text-primary)]">{req.requester}</span> on {req.date_requested}
                   </p>
                   {req.remarks && (
-                    <p className="text-xs text-slate-400 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg p-2.5 mt-3 leading-normal">
-                      <span className="font-semibold text-slate-300 block mb-0.5">Requester Notes:</span>
+                    <p className="text-xs text-[var(--text-secondary)] bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg p-2.5 mt-3 leading-normal">
+                      <span className="font-semibold text-[var(--text-primary)] block mb-0.5">Requester Notes:</span>
                       {req.remarks}
                     </p>
                   )}
@@ -264,14 +290,14 @@ export default function ApprovalsPage() {
               {/* Valuation and Quick Action buttons */}
               <div className="md:w-56 flex flex-col justify-center items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-3 w-full md:w-auto">
                 <div className="text-left md:text-center">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Requisition Value</span>
-                  <span className="font-extrabold text-white text-xl block mt-0.5 f1-numbers">{"\u20B9"}{req.amount.toLocaleString('en-IN')}</span>
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Requisition Value</span>
+                  <span className="font-extrabold text-[var(--text-primary)] text-xl block mt-0.5 f1-numbers">{"\u20B9"}{req.amount.toLocaleString('en-IN')}</span>
                 </div>
 
                 <div className="flex flex-col gap-2 w-full font-mono">
                   <button 
                     onClick={() => setSelectedApproval(req)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer"
                   >
                     <Eye size={14} /> Review Details
                   </button>
@@ -326,30 +352,30 @@ export default function ApprovalsPage() {
                   }`}>
                     {selectedApproval.entity_type.replace('_', ' ')}
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">{selectedApproval.entity_number}</span>
+                  <span className="text-xs text-[var(--text-secondary)] font-mono">{selectedApproval.entity_number}</span>
                 </div>
-                <h3 className="text-lg font-bold text-white mt-1.5 font-display">Approval Verification Matrix</h3>
+                <h3 className="text-lg font-bold text-[var(--text-primary)] mt-1.5 font-display">Approval Verification Matrix</h3>
               </div>
               <button 
                 onClick={() => setSelectedApproval(null)}
-                className="text-slate-400 hover:text-white text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
+                className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] text-sm font-semibold p-1 hover:bg-[var(--bg-subtle)] rounded transition-colors"
               >
                 ✕ Close
               </button>
             </div>
 
             {/* Body */}
-            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-slate-300 custom-scrollbar">
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-[var(--text-secondary)] custom-scrollbar">
               {/* Info grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg">
-                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Requester Details</span>
-                  <h4 className="font-bold text-white text-sm mt-1">{selectedApproval.requester}</h4>
-                  <p className="text-xs text-slate-400 mt-1">Date Requested: {selectedApproval.date_requested}</p>
+                  <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Requester Details</span>
+                  <h4 className="font-bold text-[var(--text-primary)] text-sm mt-1">{selectedApproval.requester}</h4>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">Date Requested: {selectedApproval.date_requested}</p>
                 </div>
                 <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex flex-col justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Verification Status</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-bold uppercase tracking-wider block">Verification Status</span>
                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider mt-1.5 ${
                       selectedApproval.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
                       selectedApproval.status === 'rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/25' :
@@ -363,10 +389,10 @@ export default function ApprovalsPage() {
 
               {/* Title & Remarks */}
               <div className="space-y-2">
-                <h4 className="text-white font-bold text-sm">{selectedApproval.title}</h4>
+                <h4 className="text-[var(--text-primary)] font-bold text-sm">{selectedApproval.title}</h4>
                 {selectedApproval.remarks && (
-                  <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-3 rounded-lg text-xs leading-relaxed">
-                    <span className="text-slate-400 font-bold block mb-1">Requisitioner Justification Notes:</span>
+                  <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] p-3 rounded-lg text-xs leading-relaxed text-[var(--text-secondary)]">
+                    <span className="text-[var(--text-muted)] font-bold block mb-1">Requisitioner Justification Notes:</span>
                     {selectedApproval.remarks}
                   </div>
                 )}
@@ -374,11 +400,11 @@ export default function ApprovalsPage() {
 
               {/* Line items breakdown */}
               <div>
-                <h4 className="font-bold text-white text-xs uppercase tracking-wider mb-2.5">Line Items Specifications</h4>
+                <h4 className="font-bold text-[var(--text-primary)] text-xs uppercase tracking-wider mb-2.5">Line Items Specifications</h4>
                 <div className="bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg overflow-hidden">
-                  <table className="w-full text-left border-collapse text-xs">
+                  <table className="w-full text-left border-collapse text-xs text-[var(--text-secondary)]">
                     <thead>
-                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-slate-400">
+                      <tr className="bg-[var(--bg-subtle)] border-b border-[var(--border-default)] text-[var(--text-muted)]">
                         <th className="p-3 font-semibold">Specification</th>
                         <th className="p-3 font-semibold text-right">Quantity</th>
                         <th className="p-3 font-semibold text-right">Est. Unit Price</th>
@@ -387,45 +413,45 @@ export default function ApprovalsPage() {
                     </thead>
                     <tbody>
                       {selectedApproval.entity_number.includes('PO-2026-00009') || selectedApproval.entity_number.includes('INV-2026-00012') ? (
-                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                        <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                           <td className="p-3">
-                            <p className="font-bold text-white">Rack Server 2U Upgrade</p>
-                            <span className="text-[10px] text-slate-400">Xeon Silver, 64GB RAM, 2TB SSD</span>
+                            <p className="font-bold text-[var(--text-primary)]">Rack Server 2U Upgrade</p>
+                            <span className="text-[10px] text-[var(--text-muted)]">Xeon Silver, 64GB RAM, 2TB SSD</span>
                           </td>
                           <td className="p-3 text-right">8 Units</td>
                           <td className="p-3 text-right f1-numbers">{"\u20B9"}3,43,750</td>
-                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}27,50,000</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}27,50,000</td>
                         </tr>
                       ) : selectedApproval.entity_number.includes('QUO-2026-00018') ? (
                         <>
-                          <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                             <td className="p-3">
-                              <p className="font-bold text-white">Ergonomic Mesh Chair</p>
-                              <span className="text-[10px] text-slate-400">High back, lumbar support</span>
+                              <p className="font-bold text-[var(--text-primary)]">Ergonomic Mesh Chair</p>
+                              <span className="text-[10px] text-[var(--text-muted)]">High back, lumbar support</span>
                             </td>
                             <td className="p-3 text-right">80 Chairs</td>
                             <td className="p-3 text-right f1-numbers">{"\u20B9"}3,500</td>
-                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}2,80,000</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}2,80,000</td>
                           </tr>
-                          <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                          <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                             <td className="p-3">
-                              <p className="font-bold text-white">Standing Desk</p>
-                              <span className="text-[10px] text-slate-400">Dual motor, memory preset</span>
+                              <p className="font-bold text-[var(--text-primary)]">Standing Desk</p>
+                              <span className="text-[10px] text-[var(--text-muted)]">Dual motor, memory preset</span>
                             </td>
                             <td className="p-3 text-right">10 Units</td>
                             <td className="p-3 text-right f1-numbers">{"\u20B9"}30,000</td>
-                            <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}3,00,000</td>
+                            <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}3,00,000</td>
                           </tr>
                         </>
                       ) : (
-                        <tr className="border-b border-[var(--border-default)] hover:bg-white/5 last:border-0">
+                        <tr className="border-b border-[var(--border-default)] hover:bg-[var(--bg-subtle)] last:border-0">
                           <td className="p-3">
-                            <p className="font-bold text-white">General Procurement Requisition Supplies</p>
-                            <span className="text-[10px] text-slate-400">Standard operational supplies matching procurement guidelines</span>
+                            <p className="font-bold text-[var(--text-primary)]">General Procurement Requisition Supplies</p>
+                            <span className="text-[10px] text-[var(--text-muted)]">Standard operational supplies matching procurement guidelines</span>
                           </td>
                           <td className="p-3 text-right">1 Lot</td>
                           <td className="p-3 text-right f1-numbers">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</td>
-                          <td className="p-3 text-right f1-numbers font-bold text-white">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</td>
+                          <td className="p-3 text-right f1-numbers font-bold text-[var(--text-primary)]">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</td>
                         </tr>
                       )}
                     </tbody>
@@ -435,7 +461,7 @@ export default function ApprovalsPage() {
 
               {/* Total Summary */}
               <div className="bg-[var(--bg-subtle)] border border-[var(--border-default)] p-4 rounded-lg flex justify-between items-center text-xs">
-                <span className="text-white font-bold text-sm">Total Value to Approve</span>
+                <span className="text-[var(--text-primary)] font-bold text-sm">Total Value to Approve</span>
                 <span className="font-extrabold text-[var(--accent)] text-lg f1-numbers">{"\u20B9"}{selectedApproval.amount.toLocaleString('en-IN')}</span>
               </div>
             </div>
@@ -445,7 +471,7 @@ export default function ApprovalsPage() {
               <div>
                 <button 
                   onClick={() => setSelectedApproval(null)}
-                  className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] hover:text-white transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-strong)] rounded-lg text-xs font-semibold hover:bg-[var(--bg-surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
                 >
                   Close
                 </button>
@@ -458,7 +484,7 @@ export default function ApprovalsPage() {
                       handleAction(selectedApproval.id, 'rejected');
                       setSelectedApproval(null);
                     }}
-                    className="px-4 py-2 bg-rose-900/40 hover:bg-rose-900 border border-rose-500/30 rounded-lg text-xs font-semibold text-rose-300 hover:text-white transition-colors cursor-pointer"
+                    className="px-4 py-2 bg-rose-500/10 hover:bg-rose-600 border border-rose-500/25 rounded-lg text-xs font-semibold text-rose-500 hover:text-white transition-colors cursor-pointer"
                   >
                     Reject Requisition
                   </button>
