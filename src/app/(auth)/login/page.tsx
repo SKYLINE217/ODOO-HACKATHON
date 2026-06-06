@@ -3,15 +3,57 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { Building2, Mail, Lock, ArrowRight } from 'lucide-react'
-import { createClient } from '@/utils/supabase/client'
 
-// ── Helper: set bypass session via server-side API route ───────────────────
-// The API sets the cookie AND returns a redirect — both in one response.
-// This guarantees the cookie is committed before the browser navigates.
+// ── Hardcoded demo accounts ─────────────────────────────────────────────────
+const DEMO_ACCOUNTS: Record<string, object> = {
+  'admin@vendorbridge.io': {
+    id: '00000000-0000-0000-0000-000000000001',
+    full_name: 'Alex Mercer',
+    email: 'admin@vendorbridge.io',
+    role: 'admin',
+    department: 'Executive Office',
+    avatar_url: null,
+    phone: '+1 555-0199',
+    onboarded: true,
+  },
+  'manager@vendorbridge.io': {
+    id: '00000000-0000-0000-0000-000000000002',
+    full_name: 'Sarah Connor',
+    email: 'manager@vendorbridge.io',
+    role: 'manager',
+    department: 'Operations & IT',
+    avatar_url: null,
+    phone: '+1 555-0200',
+    onboarded: true,
+  },
+  'procurement@vendorbridge.io': {
+    id: '00000000-0000-0000-0000-000000000003',
+    full_name: 'Raj Kumar',
+    email: 'procurement@vendorbridge.io',
+    role: 'procurement_officer',
+    department: 'Procurement & Supply',
+    avatar_url: null,
+    phone: '+1 555-0201',
+    onboarded: true,
+  },
+  'vendor@vendorbridge.io': {
+    id: '00000000-0000-0000-0000-000000000004',
+    full_name: 'Apex Vendor Rep',
+    email: 'vendor@vendorbridge.io',
+    role: 'vendor',
+    department: 'Sales',
+    avatar_url: null,
+    phone: '+1 555-0202',
+    vendor_id: 'vid-apex',
+    onboarded: true,
+  },
+}
+
+const VALID_PASSWORDS = ['admin', 'password', 'admin@123', 'password123', 'pass123', 'Admin@123']
+
+// ── Set session via API route (cookie set server-side, then redirect) ────────
 async function setBypassSession(profile: object): Promise<void> {
   try {
-    // redirect:'follow' lets the browser follow the 302 from the API route,
-    // committing the Set-Cookie header before the page changes.
     await fetch('/api/auth/set-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -19,47 +61,19 @@ async function setBypassSession(profile: object): Promise<void> {
       credentials: 'same-origin',
       redirect: 'follow',
     })
-    // The fetch followed the redirect to '/'. Now navigate there.
     window.location.href = '/'
   } catch {
-    // Fallback: set client-side cookie if API fails, then navigate
+    // Fallback: client-side cookie
     document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; SameSite=Lax`
     window.location.href = '/'
   }
 }
 
 export default function LoginPage() {
-  const supabase = createClient()
-
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorText, setErrorText] = useState<string | null>(null)
-
-  const handleGoogleLogin = async () => {
-    setErrorText(null)
-    setLoading(true)
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
-          queryParams: { access_type: 'offline', prompt: 'select_account' },
-        },
-      })
-      if (error) {
-        if (error.message?.toLowerCase().includes('provider') || (error as any)?.error_code === 'validation_failed') {
-          setErrorText('Google Sign-In is not yet enabled. Enable it in your Supabase Dashboard → Authentication → Providers → Google.')
-        } else {
-          setErrorText(error.message || 'Failed to initialize Google Sign In')
-        }
-        setLoading(false)
-      }
-    } catch (err: any) {
-      setErrorText(err.message || 'Failed to initialize Google Sign In')
-      setLoading(false)
-    }
-  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,57 +82,22 @@ export default function LoginPage() {
 
     const lowerEmail = email.toLowerCase().trim()
 
-    // ── 1. Demo/seed accounts (no Supabase needed) ──────────────────────────
-    const isSeedEmail =
-      lowerEmail.includes('admin') || lowerEmail.includes('manager') ||
-      lowerEmail.includes('procurement') || lowerEmail.includes('vendor') ||
-      lowerEmail.includes('lead')
-    const isValidSeedPassword = [
-      'admin', 'password', 'admin@123', 'password123', 'pass123', 'Admin@123'
-    ].includes(password)
-
-    if (isSeedEmail && isValidSeedPassword) {
-      let profile: any = null
-
-      if (lowerEmail.includes('admin')) {
-        profile = { id: '00000000-0000-0000-0000-000000000001', full_name: 'Alex Mercer', email: 'admin@vendorbridge.io', role: 'admin', department: 'Executive Office', avatar_url: null, phone: '+1 555-0199', onboarded: true }
-      } else if (lowerEmail.includes('manager')) {
-        profile = { id: '00000000-0000-0000-0000-000000000002', full_name: 'Sarah Connor', email: 'manager@vendorbridge.io', role: 'manager', department: 'Operations & IT', avatar_url: null, phone: '+1 555-0200', onboarded: true }
-      } else if (lowerEmail.includes('procurement')) {
-        profile = { id: '00000000-0000-0000-0000-000000000003', full_name: 'Raj Kumar', email: 'procurement@vendorbridge.io', role: 'procurement_officer', department: 'Procurement & Supply', avatar_url: null, phone: '+1 555-0201', onboarded: true }
-      } else if (lowerEmail.includes('vendor')) {
-        profile = { id: '00000000-0000-0000-0000-000000000004', full_name: 'Apex Vendor Rep', email: 'vendor@vendorbridge.io', role: 'vendor', department: 'Sales', avatar_url: null, phone: '+1 555-0202', vendor_id: 'vid-apex', onboarded: true }
-      }
-
-      if (profile) {
-        await setBypassSession(profile)
-        // Hard navigate so cookie is sent with the next request
-        window.location.href = '/'
-        return
-      }
+    // ── 1. Check hardcoded demo accounts ────────────────────────────────────
+    const demoProfile = DEMO_ACCOUNTS[lowerEmail]
+    if (demoProfile && VALID_PASSWORDS.includes(password)) {
+      await setBypassSession(demoProfile)
+      return // navigation happens inside setBypassSession
     }
 
-    // ── 2. Real Supabase auth ───────────────────────────────────────────────
+    // ── 2. Check locally-registered accounts (signup flow) ──────────────────
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-
-      if (!error && data?.user) {
-        // Clear any bypass cookie via API
-        await fetch('/api/auth/set-session', { method: 'DELETE', credentials: 'same-origin' })
-        window.location.href = '/'
-        return
-      }
-
-      if (error) throw error
-
-      // ── 3. Local registry fallback (for signups without email confirmation) ─
-      const usersRegistry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
-      const localUser = usersRegistry[lowerEmail]
+      const registry = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
+      const localUser = registry[lowerEmail]
       if (localUser && localUser.password === password) {
         const profile = {
-          id: localUser.id || 'mock-' + Math.random().toString(36).substring(2, 9),
+          id: localUser.id || 'local-' + Math.random().toString(36).substring(2, 9),
           full_name: localUser.full_name,
-          email: email,
+          email: lowerEmail,
           role: localUser.role || 'procurement_officer',
           avatar_url: null,
           department: localUser.department || null,
@@ -126,22 +105,15 @@ export default function LoginPage() {
           onboarded: localUser.onboarded ?? false,
         }
         await setBypassSession(profile)
-        window.location.href = '/'
         return
       }
-
-      throw new Error('Invalid email or password.')
-    } catch (err: any) {
-      setErrorText(
-        err.message?.includes('Invalid login') || err.message?.includes('Invalid email')
-          ? 'Incorrect email or password.'
-          : err.message?.includes('Email not confirmed')
-          ? 'Email not yet confirmed. Use a demo account below.'
-          : (err.message || 'Sign-in failed. Check your credentials.')
-      )
-    } finally {
-      setLoading(false)
+    } catch {
+      // localStorage unavailable — ignore
     }
+
+    // ── 3. No match found ────────────────────────────────────────────────────
+    setErrorText('Incorrect email or password. Use a demo account below or sign up.')
+    setLoading(false)
   }
 
   return (
@@ -235,54 +207,23 @@ export default function LoginPage() {
                   Remember me
                 </label>
               </div>
-              <div className="text-xs font-semibold">
-                <a href="#" className="text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-mono">
-                  Forgot password?
-                </a>
-              </div>
+              <a href="#" className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors font-mono">
+                Forgot password?
+              </a>
             </div>
 
-            <div>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded text-sm font-bold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-all cursor-pointer font-mono uppercase tracking-widest shadow-md shadow-[var(--accent)]/10 skew-x-[-6deg] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <>Sign In <ArrowRight size={15} /></>
-                )}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex justify-center items-center gap-2 py-3 px-4 rounded text-sm font-bold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-all cursor-pointer font-mono uppercase tracking-widest shadow-md shadow-[var(--accent)]/10 skew-x-[-6deg] disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <>Sign In <ArrowRight size={15} /></>
+              )}
+            </button>
           </form>
-
-          {/* Google SSO */}
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[var(--border-default)]" />
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-mono">
-                <span className="bg-[var(--bg-surface)] px-2 text-[var(--text-muted)] font-bold tracking-wider">Or continue with</span>
-              </div>
-            </div>
-            <div className="mt-4">
-              <button
-                onClick={handleGoogleLogin}
-                type="button"
-                className="w-full flex justify-center items-center gap-2 py-2.5 px-4 border border-[var(--border-default)] rounded bg-[var(--bg-subtle)] hover:bg-[var(--bg-surface)] text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer font-mono uppercase tracking-wider"
-              >
-                <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
-                Google Portal Link
-              </button>
-            </div>
-          </div>
 
           <div className="mt-6 text-center border-t border-[var(--border-default)] pt-4">
             <span className="text-xs text-[var(--text-secondary)]">
