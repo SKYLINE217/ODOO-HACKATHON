@@ -33,7 +33,15 @@ export default function SignupPage() {
           },
         },
       })
-      if (error) throw error
+      if (error) {
+        if (error.message?.toLowerCase().includes('provider') || (error as any)?.error_code === 'validation_failed') {
+          setMessage({ type: 'error', text: 'Google Sign-In is not yet enabled. Go to Supabase Dashboard → Authentication → Providers → Google, enable it, and add your Google OAuth Client ID & Secret.' })
+        } else {
+          setMessage({ type: 'error', text: error.message || 'Failed to initialize Google Sign In' })
+        }
+        setLoading(false)
+        return
+      }
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to initialize Google Sign In' })
       setLoading(false)

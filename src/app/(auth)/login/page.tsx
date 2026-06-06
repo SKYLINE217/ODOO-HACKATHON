@@ -24,9 +24,18 @@ export default function LoginPage() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: { access_type: 'offline', prompt: 'select_account' },
         },
       })
-      if (error) throw error
+      if (error) {
+        if (error.message?.toLowerCase().includes('provider') || (error as any)?.error_code === 'validation_failed') {
+          setErrorText('Google Sign-In is not yet enabled. Go to your Supabase Dashboard → Authentication → Providers → Google and enable it, then add your Google OAuth Client ID & Secret.')
+        } else {
+          setErrorText(error.message || 'Failed to initialize Google Sign In')
+        }
+        setLoading(false)
+        return
+      }
     } catch (err: any) {
       setErrorText(err.message || 'Failed to initialize Google Sign In')
       setLoading(false)
