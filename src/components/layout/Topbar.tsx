@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Bell, Search, CheckCircle2, Clock, AlertCircle, User, Settings, LogOut, ChevronDown, Loader2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 interface Notification {
@@ -16,8 +17,10 @@ interface Notification {
 
 export default function Topbar() {
   const { user, loading, logout } = useAuth()
+  const router = useRouter()
   const [showNotifications, setShowNotifications] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
+  const [loggingOut, setLoggingOut] = useState(false)
   const notifRef = useRef<HTMLDivElement>(null)
   const userMenuRef = useRef<HTMLDivElement>(null)
 
@@ -65,8 +68,13 @@ export default function Topbar() {
   }, [])
 
   const handleLogout = async () => {
+    setLoggingOut(true)
+    setShowUserMenu(false)
     await logout()
-    window.location.href = '/login'
+    // router.replace prevents going back to dashboard via browser back button
+    // router.refresh() clears Next.js RSC cache so stale dashboard content is gone
+    router.replace('/login')
+    router.refresh()
   }
 
   return (
@@ -192,9 +200,13 @@ export default function Topbar() {
                     </Link>
                   </div>
                   <div className="py-1 border-t border-slate-100">
-                    <button onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer">
-                      <LogOut size={15} /> Sign Out
+                    <button
+                      onClick={handleLogout}
+                      disabled={loggingOut}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer disabled:opacity-60"
+                    >
+                      {loggingOut ? <Loader2 size={15} className="animate-spin" /> : <LogOut size={15} />}
+                      {loggingOut ? 'Signing out...' : 'Sign Out'}
                     </button>
                   </div>
                 </div>

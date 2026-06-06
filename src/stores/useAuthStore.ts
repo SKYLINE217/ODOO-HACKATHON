@@ -18,25 +18,51 @@ interface AuthState {
   logout: () => Promise<void>
 }
 
+// Clear ALL session-related cookies — Supabase SSR tokens, bypass cookie
+function clearAllSessionCookies() {
+  if (typeof window === 'undefined') return
+  const cookiesToClear = [
+    'sb-bypass-session',
+    'sb-access-token',
+    'sb-refresh-token',
+  ]
+  cookiesToClear.forEach(name => {
+    document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+    document.cookie = `${name}=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+  })
+  // Also wipe any sb-* Supabase auth cookies by scanning all cookies
+  document.cookie.split(';').forEach(c => {
+    const name = c.trim().split('=')[0]
+    if (name.startsWith('sb-')) {
+      document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
+    }
+  })
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: true,
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
   logout: async () => {
+    // 1. Sign out from Supabase server-side first
     try {
-      // Sign out from Supabase (no-op if not authenticated via Supabase)
       const supabase = createClient()
-      await supabase.auth.signOut()
-    } catch (err) {
-      console.warn('Supabase signOut failed (may be using bypass mode):', err)
-    }
+      await supabase.auth.signOut({ scope: 'global' })
+    } catch { /* ignore — may be in bypass mode */ }
 
-    // Clear bypass cookie
+    // 2. Clear all session cookies
+    clearAllSessionCookies()
+
+    // 3. Clear localStorage of any cached data
     if (typeof window !== 'undefined') {
-      document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+      const keysToRemove = Object.keys(localStorage).filter(k =>
+        k.startsWith('vb_') || k.startsWith('sb-') || k.includes('supabase')
+      )
+      keysToRemove.forEach(k => localStorage.removeItem(k))
     }
 
-    set({ user: null })
+    // 4. Reset store state
+    set({ user: null, loading: false })
   }
 }))

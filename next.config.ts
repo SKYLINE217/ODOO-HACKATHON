@@ -24,6 +24,19 @@ const securityHeaders = [
   },
 ]
 
+// Prevent browser from caching authenticated dashboard pages
+// This is the key fix for back-button post-logout bypass
+const noCacheHeaders = [
+  { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+  { key: 'Pragma', value: 'no-cache' },
+  { key: 'Expires', value: '0' },
+]
+
+const DASHBOARD_ROUTES = [
+  '/', '/vendors', '/rfqs', '/quotations', '/purchase-orders',
+  '/invoices', '/approvals', '/reports', '/activity', '/profile',
+]
+
 const nextConfig: NextConfig = {
   async headers() {
     return [
@@ -31,6 +44,11 @@ const nextConfig: NextConfig = {
         source: '/(.*)',
         headers: securityHeaders,
       },
+      // Apply no-cache to every dashboard route
+      ...DASHBOARD_ROUTES.map(route => ({
+        source: route,
+        headers: noCacheHeaders,
+      })),
     ]
   },
 };
