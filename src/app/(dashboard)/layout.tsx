@@ -1,42 +1,54 @@
 'use client'
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import Sidebar from '@/components/layout/Sidebar'
 import Topbar from '@/components/layout/Topbar'
 
-export default function DashboardLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+function LoadingSkeleton({ message }: { message: string }) {
+  return (
+    <div className="flex h-screen w-full bg-slate-50 items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 animate-pulse" />
+        <div className="space-y-2 text-center">
+          <div className="w-32 h-3 bg-slate-200 rounded animate-pulse mx-auto" />
+          <div className="w-20 h-2 bg-slate-100 rounded animate-pulse mx-auto" />
+        </div>
+        <p className="text-xs text-slate-400 font-medium">{message}</p>
+      </div>
+    </div>
+  )
+}
+
+// Inner component uses useSearchParams — must be inside Suspense
+function DashboardGuard({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isOAuthRedirect = searchParams.get('from') === 'oauth'
+
+  const [oauthGrace, setOauthGrace] = useState(isOAuthRedirect)
 
   useEffect(() => {
-    if (!loading && !user) {
-      // User is not authenticated — hard redirect to login and prevent back navigation
-      router.replace('/login')
-    }
-  }, [user, loading, router])
+    if (!isOAuthRedirect) return
+    const timer = setTimeout(() => setOauthGrace(false), 3000)
+    return () => clearTimeout(timer)
+  }, [isOAuthRedirect])
 
-  // While loading, show a full-screen skeleton to prevent flashing
-  if (loading) {
-    return (
-      <div className="flex h-screen w-full bg-slate-50 items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 animate-pulse" />
-          <div className="space-y-2 text-center">
-            <div className="w-32 h-3 bg-slate-200 rounded animate-pulse mx-auto" />
-            <div className="w-20 h-2 bg-slate-100 rounded animate-pulse mx-auto" />
-          </div>
-        </div>
-      </div>
-    )
+  useEffect(() => {
+    if (user) setOauthGrace(false)
+  }, [user])
+
+  useEffect(() => {
+    if (loading || oauthGrace) return
+    if (!user) router.replace('/login')
+  }, [user, loading, oauthGrace, router])
+
+  if (loading || oauthGrace) {
+    return <LoadingSkeleton message={oauthGrace ? 'Completing sign-in...' : 'Loading...'} />
   }
 
-  // If not authenticated (loading done but no user), render nothing while redirect fires
   if (!user) return null
 
   return (
@@ -49,5 +61,15 @@ export default function DashboardLayout({
         </main>
       </div>
     </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <Suspense fallback={<LoadingSkeleton message="Loading..." />}>
+      <DashboardGuard>{children}</DashboardGuard>
+    </Suspense>
   )
 }
