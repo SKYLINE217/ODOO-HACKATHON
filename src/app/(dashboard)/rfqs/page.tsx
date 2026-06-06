@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { swr, cacheInvalidate } from '@/lib/cache'
 
 interface RFQItem {
   item_name: string
@@ -110,47 +111,32 @@ export default function RfqsPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Load RFQs from Supabase on mount
+  // Load RFQs — SWR: instant from cache, revalidates in background
   useEffect(() => {
-    async function loadRfqs() {
-      try {
-        const { data: rfqsData, error: rfqErr } = await supabase
-          .from('rfqs')
-          .select('*, rfq_items(*)')
-          .order('created_at', { ascending: false })
-
-        if (rfqErr) throw rfqErr
-
-        if (rfqsData && rfqsData.length > 0) {
-          const mapped: RFQ[] = rfqsData.map((r: any) => ({
-            id: r.id,
-            rfq_number: r.rfq_number,
-            title: r.title,
-            description: r.description || '',
-            status: r.status || 'draft',
-            deadline: r.deadline ? r.deadline.split('T')[0] : '',
-            budget_estimate: Number(r.budget_estimate) || 0,
-            invited_vendors_count: 3, // mock count
-            items: r.rfq_items ? r.rfq_items.map((i: any) => ({
-              item_name: i.item_name,
-              quantity: Number(i.quantity) || 1,
-              unit: i.unit,
-              description: i.description || ''
-            })) : []
-          }))
-          setRfqs(mapped)
-          setDbNotice('Synced with Supabase database')
-        }
-      } catch (err: any) {
-        console.warn('Failed to load RFQs from Supabase, using mock local storage:', err.message)
-        const stored = localStorage.getItem('vb_rfqs')
-        if (stored) {
-          setRfqs(JSON.parse(stored))
-        }
-      }
+    async function fetchRfqs(): Promise<RFQ[]> {
+      const { data, error } = await supabase
+        .from('rfqs')
+        .select('id, rfq_number, title, description, status, deadline, budget_estimate, rfq_items(item_name, quantity, unit, description)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []).map((r: any) => ({
+        id: r.id,
+        rfq_number: r.rfq_number,
+        title: r.title,
+        description: r.description || '',
+        status: r.status || 'draft',
+        deadline: r.deadline ? r.deadline.split('T')[0] : '',
+        budget_estimate: Number(r.budget_estimate) || 0,
+        invited_vendors_count: 0,
+        items: (r.rfq_items || []).map((i: any) => ({
+          item_name: i.item_name, quantity: Number(i.quantity) || 1,
+          unit: i.unit, description: i.description || ''
+        }))
+      }))
     }
-
-    loadRfqs()
+    swr('rfqs:list', fetchRfqs, fresh => { if (fresh.length > 0) setRfqs(fresh) })
+      .then(data => { if (data.length > 0) setRfqs(data) })
+      .catch(() => { const s = localStorage.getItem('vb_rfqs'); if (s) try { setRfqs(JSON.parse(s)) } catch {} })
   }, [])
 
   const handleAddItemRow = () => {
@@ -174,66 +160,61 @@ export default function RfqsPage() {
     setFormSaving(true)
     setFormError(null)
 
-    const newRfqId = Math.random().toString(36).substring(2, 9)
-    const newRfq: RFQ = {
-      id: newRfqId,
-      rfq_number: `RFQ-2026-${String(1000 + rfqs.length).padStart(5, '0')}`,
-      title,
-      description,
-      status: 'draft',
-      deadline,
+    const validItems = formItems.filter(i => i.item_name.trim() !== '')
+
+    // OPTIMISTIC UPDATE — show in UI immediately
+    const optimisticId = `opt-${Date.now()}`
+    const optimisticRfq: RFQ = {
+      id: optimisticId,
+      rfq_number: `RFQ-${new Date().getFullYear()}-${String(1000 + rfqs.length).padStart(5,'0')}`,
+      title, description, status: 'draft', deadline,
       budget_estimate: Number(budget),
       invited_vendors_count: Number(invitedCount),
-      items: formItems.filter(item => item.item_name.trim() !== '')
+      items: validItems
     }
+    setRfqs(prev => [optimisticRfq, ...prev])
+    setShowAddForm(false)
+    setTitle(''); setDescription(''); setDeadline(''); setBudget(''); setInvitedCount('3')
+    setFormItems([{ item_name: '', quantity: 1, unit: 'units', description: '' }])
 
     try {
       const { data: rfqRecord, error: rfqErr } = await supabase
         .from('rfqs')
-        .insert({
-          title,
-          description,
-          status: 'draft',
+        .insert({ title, description, status: 'draft',
           deadline: new Date(deadline).toISOString(),
-          budget_estimate: Number(budget),
-          created_by: user?.id
-        })
-        .select()
+          budget_estimate: Number(budget), created_by: user?.id })
+        .select('id, rfq_number')
         .single()
-
       if (rfqErr) throw rfqErr
 
-      if (rfqRecord && newRfq.items.length > 0) {
-        const itemsToInsert = newRfq.items.map((item, index) => ({
-          rfq_id: rfqRecord.id,
-          item_name: item.item_name,
-          quantity: item.quantity,
-          unit: item.unit,
-          description: item.description || '',
-          sort_order: index
-        }))
-        await supabase.from('rfq_items').insert(itemsToInsert)
+      // Insert items in parallel if any
+      if (rfqRecord && validItems.length > 0) {
+        await supabase.from('rfq_items').insert(
+          validItems.map((item, idx) => ({
+            rfq_id: rfqRecord.id, item_name: item.item_name,
+            quantity: item.quantity, unit: item.unit,
+            description: item.description || '', sort_order: idx
+          }))
+        )
       }
 
-      // Use server-generated rfq_number if available
-      if (rfqRecord?.rfq_number) newRfq.rfq_number = rfqRecord.rfq_number
-      if (rfqRecord?.id) newRfq.id = rfqRecord.id
-      setDbNotice('RFQ created successfully in Supabase!')
+      // Replace optimistic entry with real DB data
+      if (rfqRecord) {
+        setRfqs(prev => prev.map(r =>
+          r.id === optimisticId
+            ? { ...r, id: rfqRecord.id, rfq_number: rfqRecord.rfq_number || r.rfq_number }
+            : r
+        ))
+      }
+      cacheInvalidate('rfqs:list')
     } catch (err: any) {
-      setFormError(err.message || 'Could not save to database. Kept locally.')
+      // Rollback on failure
+      setRfqs(prev => prev.filter(r => r.id !== optimisticId))
+      setFormError(err.message || 'Could not save to database.')
+      setShowAddForm(true)
     } finally {
       setFormSaving(false)
     }
-
-    setRfqs([newRfq, ...rfqs])
-    setShowAddForm(false)
-    setTitle('')
-    setDescription('')
-    setDeadline('')
-    setBudget('')
-    setInvitedCount('3')
-    setFormItems([{ item_name: '', quantity: 1, unit: 'units', description: '' }])
-    setFormError(null)
   }
 
   const filteredRfqs = rfqs.filter((r) => {

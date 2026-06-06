@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
+import { swr, cacheInvalidate } from '@/lib/cache'
 
 interface Vendor {
   id: string
@@ -108,43 +109,36 @@ export default function VendorsPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Load vendors from Supabase on mount
+  // Load vendors — SWR: returns cached data instantly, then revalidates in background
   useEffect(() => {
-    async function loadVendors() {
-      try {
-        const { data, error } = await supabase
-          .from('vendors')
-          .select('*, vendor_categories(name)')
-          .order('created_at', { ascending: false })
-
-        if (error) throw error
-        
-        if (data && data.length > 0) {
-          const mapped: Vendor[] = data.map((v: any) => ({
-            id: v.id,
-            company_name: v.company_name,
-            category: v.vendor_categories?.name || 'General',
-            status: v.status || 'pending',
-            contact_person: v.contact_person,
-            email: v.email,
-            phone: v.phone,
-            gst_number: v.gst_number || 'N/A',
-            rating: Number(v.rating) || 0,
-            total_orders: v.total_orders || 0
-          }))
-          setVendors(mapped)
-          setDbNotice('Synced with Supabase database')
-        }
-      } catch (err: any) {
-        // Fallback to localStorage
-        const stored = localStorage.getItem('vb_vendors')
-        if (stored) {
-          try { setVendors(JSON.parse(stored)) } catch { }
-        }
-      }
+    async function fetchVendors(): Promise<Vendor[]> {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, company_name, status, contact_person, email, phone, gst_number, rating, total_orders, vendor_categories(name)')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return (data || []).map((v: any) => ({
+        id: v.id,
+        company_name: v.company_name,
+        category: v.vendor_categories?.name || 'General',
+        status: v.status || 'pending',
+        contact_person: v.contact_person,
+        email: v.email,
+        phone: v.phone,
+        gst_number: v.gst_number || 'N/A',
+        rating: Number(v.rating) || 0,
+        total_orders: v.total_orders || 0,
+      }))
     }
 
-    loadVendors()
+    swr('vendors:list', fetchVendors, (fresh) => {
+      if (fresh.length > 0) setVendors(fresh)
+    }).then(data => {
+      if (data.length > 0) setVendors(data)
+    }).catch(() => {
+      const stored = localStorage.getItem('vb_vendors')
+      if (stored) try { setVendors(JSON.parse(stored)) } catch { }
+    })
   }, [])
 
   const handleAddVendor = async (e: React.FormEvent) => {
@@ -153,8 +147,10 @@ export default function VendorsPage() {
     setFormSaving(true)
     setFormError(null)
 
-    const newVendor: Vendor = {
-      id: Math.random().toString(36).substring(2, 9),
+    // OPTIMISTIC UPDATE — show new vendor in UI immediately
+    const optimisticId = `opt-${Date.now()}`
+    const optimisticVendor: Vendor = {
+      id: optimisticId,
       company_name: companyName,
       category,
       status: 'pending',
@@ -162,51 +158,44 @@ export default function VendorsPage() {
       email,
       phone,
       gst_number: gstNumber || 'N/A',
-      rating: 0.0,
-      total_orders: 0
+      rating: 0,
+      total_orders: 0,
     }
+    setVendors(prev => [optimisticVendor, ...prev])
+    setShowAddForm(false)
+    setCompanyName(''); setContactPerson(''); setEmail(''); setPhone(''); setGstNumber('')
 
     try {
-      // Look up category_id from vendor_categories table
-      const { data: catData } = await supabase
-        .from('vendor_categories')
+      // Run category lookup and insert in parallel where possible
+      const [catResult, insertResult] = await Promise.allSettled([
+        supabase.from('vendor_categories').select('id').eq('name', category).single(),
+        Promise.resolve(null) // placeholder
+      ])
+      const catId = catResult.status === 'fulfilled' ? catResult.value.data?.id : null
+
+      const { data: inserted, error } = await supabase
+        .from('vendors')
+        .insert({ company_name: companyName, category_id: catId, status: 'pending',
+          contact_person: contactPerson, email, phone,
+          gst_number: gstNumber || null, created_by: user?.id || null })
         .select('id')
-        .eq('name', category)
         .single()
 
-      const { error } = await supabase
-        .from('vendors')
-        .insert({
-          company_name: companyName,
-          category_id: catData?.id || null,
-          status: 'pending',
-          contact_person: contactPerson,
-          email,
-          phone,
-          gst_number: gstNumber || null,
-          created_by: user?.id || null
-        })
-
       if (error) throw error
-      setDbNotice('Vendor saved to Supabase!')
+
+      // Replace optimistic entry with real DB id
+      if (inserted?.id) {
+        setVendors(prev => prev.map(v => v.id === optimisticId ? { ...v, id: inserted.id } : v))
+      }
+      cacheInvalidate('vendors:list')
     } catch (err: any) {
-      setFormError(err.message?.includes('duplicate') ? 'A vendor with this email already exists.' : (err.message || 'Failed to save. Data kept locally.'))
+      // Rollback optimistic update on failure
+      setVendors(prev => prev.filter(v => v.id !== optimisticId))
+      setFormError(err.message?.includes('duplicate') ? 'A vendor with this email already exists.' : (err.message || 'Failed to save.'))
+      setShowAddForm(true)
     } finally {
       setFormSaving(false)
     }
-
-    // Update local UI state
-    const updated = [newVendor, ...vendors]
-    setVendors(updated)
-    localStorage.setItem('vb_vendors', JSON.stringify(updated))
-
-    setShowAddForm(false)
-    setCompanyName('')
-    setContactPerson('')
-    setEmail('')
-    setPhone('')
-    setGstNumber('')
-    setFormError(null)
   }
 
   const filteredVendors = vendors.filter((v) => {
