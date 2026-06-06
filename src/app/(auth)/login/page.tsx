@@ -223,6 +223,41 @@ export default function LoginPage() {
             </span>
           </div>
 
+          {/* Quick Demo Logins */}
+          <div className="mt-8 pt-6 border-t border-slate-800/80">
+            <p className="text-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Quick Demo Login</p>
+            <div className="grid grid-cols-2 gap-3">
+              <button 
+                type="button" 
+                onClick={() => { setEmail('admin@vendorbridge.io'); setPassword('Admin@123'); }}
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-indigo-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Admin
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setEmail('manager@vendorbridge.io'); setPassword('Admin@123'); }}
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-amber-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Manager
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setEmail('procurement@vendorbridge.io'); setPassword('Admin@123'); }}
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-emerald-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Procurement
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setEmail('vendor@vendorbridge.io'); setPassword('Admin@123'); }}
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-sky-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+              >
+                Vendor
+              </button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
