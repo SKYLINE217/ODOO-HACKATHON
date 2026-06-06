@@ -17,21 +17,16 @@ async function fetchOrCreateProfile(
     .single()
 
   if (profile && !error) {
-    // Replicate profile in background to MySQL to ensure consistency
     if (typeof window !== 'undefined') {
       fetch('/api/db', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          table: 'profiles',
-          chain: [{ method: 'upsert', args: [profile] }]
-        })
+        body: JSON.stringify({ table: 'profiles', chain: [{ method: 'upsert', args: [profile] }] })
       }).catch(err => console.warn('MySQL profile replication failed:', err))
     }
     return profile as UserProfile
   }
 
-  // Profile missing — upsert it (Google OAuth trigger may not have fired yet)
   const { data: upserted } = await supabase
     .from('profiles')
     .upsert({
@@ -47,17 +42,13 @@ async function fetchOrCreateProfile(
     fetch('/api/db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        table: 'profiles',
-        chain: [{ method: 'upsert', args: [upserted] }]
-      })
+      body: JSON.stringify({ table: 'profiles', chain: [{ method: 'upsert', args: [upserted] }] })
     }).catch(err => console.warn('MySQL upserted profile replication failed:', err))
   }
 
   return (upserted as UserProfile | null) ?? null
 }
 
-// Build a minimal user object directly from the Supabase session (no DB needed)
 function sessionToUser(session: any): UserProfile {
   const meta = session.user.user_metadata || {}
   return {
@@ -81,7 +72,10 @@ export function useAuth() {
     if (initialized.current) return
     initialized.current = true
 
-    // ── Helper: read bypass cookie (runs regardless of Supabase state) ──────
+    // ── STEP 1: Read bypass cookie SYNCHRONOUSLY ─────────────────────────────
+    // Must happen before any async Supabase call to prevent the race where
+    // onAuthStateChange fires INITIAL_SESSION+null and triggers a /login redirect
+    // before the cookie is read.
     function readBypassCookie(): boolean {
       if (typeof window === 'undefined') return false
       const bypassCookie = document.cookie
@@ -110,59 +104,49 @@ export function useAuth() {
       }
     }
 
+    // If bypass cookie found → user is set immediately, skip all Supabase checks
+    if (readBypassCookie()) {
+      // Still subscribe so logout() properly handles SIGNED_OUT events
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event: any) => {
+        if (event === 'SIGNED_OUT') {
+          setUser(null)
+          setLoading(false)
+        }
+      })
+      return () => subscription.unsubscribe()
+    }
+
+    // ── STEP 2: No bypass cookie — check real Supabase session ───────────────
     async function bootstrap() {
       try {
-        setLoading(true)
-
-        // 1. Try real Supabase session first
-        let session: any = null
-        try {
-          const result = await supabase.auth.getSession()
-          session = result.data?.session ?? null
-        } catch {
-          // Supabase unreachable — fall through to bypass cookie below
-        }
+        const { data: { session } } = await supabase.auth.getSession()
 
         if (session?.user) {
-          // Clear any local bypass cookie — real session takes priority
-          if (typeof window !== 'undefined') {
-            document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-          }
-
-          // Set user immediately from session so dashboard loads fast
           setUser(sessionToUser(session))
           setLoading(false)
 
-          // Enhance with full DB profile in background (non-blocking)
           const meta = session.user.user_metadata || {}
           fetchOrCreateProfile(
             session.user.id,
             session.user.email || '',
             meta.full_name || meta.name || '',
           ).then(profile => {
-            if (profile) {
-              setUser({ ...profile, onboarded: !!meta.onboarded })
-            }
-          }).catch(() => {/* keep session-based user — DB unavailable */})
-          return
-        }
-
-        // 2. No real session — try bypass cookie
-        if (readBypassCookie()) return
-
-        // 3. Truly unauthenticated
-        setLoading(false)
-      } catch {
-        // Last resort: try bypass cookie before giving up
-        if (!readBypassCookie()) {
+            if (profile) setUser({ ...profile, onboarded: !!meta.onboarded })
+          }).catch(() => {})
+        } else {
+          setUser(null)
           setLoading(false)
         }
+      } catch {
+        setUser(null)
+        setLoading(false)
       }
     }
 
     bootstrap()
 
-    // Subscribe to auth state changes (critical for OAuth redirects)
+    // Subscribe to auth state changes (for real Supabase OAuth sign-in)
+    // NOTE: INITIAL_SESSION is NOT handled to avoid the loading race condition.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: any, session: any) => {
         if (event === 'SIGNED_OUT') {
@@ -171,11 +155,7 @@ export function useAuth() {
           return
         }
 
-        if (
-          (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED') &&
-          session?.user
-        ) {
-          // ✅ Set immediately from session, then enhance from DB
+        if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session?.user) {
           setUser(sessionToUser(session))
           setLoading(false)
 
@@ -185,17 +165,9 @@ export function useAuth() {
             session.user.email || '',
             meta.full_name || meta.name || '',
           ).then(profile => {
-            if (profile) {
-              setUser({
-                ...profile,
-                onboarded: !!meta.onboarded
-              })
-            }
+            if (profile) setUser({ ...profile, onboarded: !!meta.onboarded })
           }).catch(() => {})
-          return
         }
-
-        setLoading(false)
       }
     )
 
