@@ -225,37 +225,45 @@ export default function LoginPage() {
 
           {/* Quick Demo Logins */}
           <div className="mt-8 pt-6 border-t border-slate-800/80">
-            <p className="text-center text-xs font-bold text-slate-500 uppercase tracking-wider mb-4">Quick Demo Login</p>
+            <div className="flex flex-col items-center justify-center mb-4">
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Quick Demo Login</p>
+              <p className="text-[11px] text-slate-400 mt-1">Password for all accounts: <strong className="text-slate-300">Admin@123</strong></p>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <button 
                 type="button" 
                 onClick={() => { setEmail('admin@vendorbridge.io'); setPassword('Admin@123'); }}
-                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-indigo-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-indigo-500 hover:bg-indigo-500/10 rounded-lg text-xs font-semibold text-slate-300 transition-all text-left flex flex-col gap-0.5"
               >
-                Admin
+                <span className="text-indigo-400">Admin</span>
+                <span className="text-[10px] text-slate-500 font-normal">admin@vendorbridge.io</span>
               </button>
               <button 
                 type="button" 
                 onClick={() => { setEmail('manager@vendorbridge.io'); setPassword('Admin@123'); }}
-                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-amber-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-amber-500 hover:bg-amber-500/10 rounded-lg text-xs font-semibold text-slate-300 transition-all text-left flex flex-col gap-0.5"
               >
-                Manager
+                <span className="text-amber-400">Manager</span>
+                <span className="text-[10px] text-slate-500 font-normal">manager@vendorbridge.io</span>
               </button>
               <button 
                 type="button" 
                 onClick={() => { setEmail('procurement@vendorbridge.io'); setPassword('Admin@123'); }}
-                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-emerald-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 rounded-lg text-xs font-semibold text-slate-300 transition-all text-left flex flex-col gap-0.5"
               >
-                Procurement
+                <span className="text-emerald-400">Procurement</span>
+                <span className="text-[10px] text-slate-500 font-normal">procurement@vendorbridge.io</span>
               </button>
               <button 
                 type="button" 
                 onClick={() => { setEmail('vendor@vendorbridge.io'); setPassword('Admin@123'); }}
-                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-sky-500 rounded-lg text-xs font-semibold text-slate-300 transition-colors"
+                className="py-2 px-3 bg-slate-900 border border-slate-700 hover:border-sky-500 hover:bg-sky-500/10 rounded-lg text-xs font-semibold text-slate-300 transition-all text-left flex flex-col gap-0.5"
               >
-                Vendor
+                <span className="text-sky-400">Vendor</span>
+                <span className="text-[10px] text-slate-500 font-normal">vendor@vendorbridge.io</span>
               </button>
             </div>
+            <p className="text-[10px] text-slate-500 text-center mt-3 italic">Click a role to autofill, then click Sign In.</p>
           </div>
 
         </div>
