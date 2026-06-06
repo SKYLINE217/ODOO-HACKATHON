@@ -81,6 +81,15 @@ export default function SignupPage() {
         throw error
       }
 
+      // Update registry with real user ID from Supabase Auth
+      if (data?.user?.id) {
+        const usersRegistryUpdate = JSON.parse(localStorage.getItem('vb_users_registry') || '{}')
+        if (usersRegistryUpdate[email.toLowerCase()]) {
+          usersRegistryUpdate[email.toLowerCase()].id = data.user.id
+          localStorage.setItem('vb_users_registry', JSON.stringify(usersRegistryUpdate))
+        }
+      }
+
       // If signup succeeds and session is created immediately (confirmations disabled)
       if (data?.session) {
         const profile = {
