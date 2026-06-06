@@ -113,7 +113,7 @@ export function useAuth() {
 
     // Subscribe to auth state changes (critical for OAuth redirects)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (event: any, session: any) => {
         if (event === 'SIGNED_OUT') {
           setUser(null)
           setLoading(false)

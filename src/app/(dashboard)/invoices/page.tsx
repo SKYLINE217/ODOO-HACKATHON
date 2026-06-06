@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -104,7 +104,7 @@ export default function InvoicesPage() {
         if (error) throw error
 
         if (dbInvs && dbInvs.length > 0) {
-          const formatted: Invoice[] = dbInvs.map(item => ({
+          const formatted: Invoice[] = dbInvs.map((item: any) => ({
             id: item.id,
             invoice_number: item.invoice_number,
             po_ref: (item.po as any)?.po_number || 'PO-Manual',

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -89,7 +89,7 @@ export default function PurchaseOrdersPage() {
         if (error) throw error
 
         if (dbPos && dbPos.length > 0) {
-          const formatted: PurchaseOrder[] = dbPos.map(item => ({
+          const formatted: PurchaseOrder[] = dbPos.map((item: any) => ({
             id: item.id,
             po_number: item.po_number,
             quotation_ref: (item.quotation as any)?.quotation_number || 'QUO-Manual',

@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -222,7 +222,7 @@ export default function QuotationsPage() {
 
             const itemPrices: { [key: string]: number } = {}
             if (qItems) {
-              qItems.forEach(qi => {
+              qItems.forEach((qi: any) => {
                 itemPrices[qi.item_name] = Number(qi.unit_price)
               })
             }
@@ -250,7 +250,7 @@ export default function QuotationsPage() {
           id: rfq.id,
           rfq_number: rfq.rfq_number,
           title: rfq.title,
-          items: (rfqItems || []).map(ri => ({
+          items: (rfqItems || []).map((ri: any) => ({
             name: ri.item_name,
             quantity: Number(ri.quantity),
             unit: ri.unit

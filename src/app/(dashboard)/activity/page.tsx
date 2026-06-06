@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useEffect } from 'react'
 import { 
@@ -98,7 +98,7 @@ export default function ActivityLogPage() {
         if (error) throw error
 
         if (dbLogs && dbLogs.length > 0) {
-          const formatted: ActivityLog[] = dbLogs.map(item => ({
+          const formatted: ActivityLog[] = dbLogs.map((item: any) => ({
             id: item.id,
             entity_type: item.entity_type,
             entity_id: item.entity_id,

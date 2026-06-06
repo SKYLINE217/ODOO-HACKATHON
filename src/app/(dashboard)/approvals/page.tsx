@@ -93,7 +93,7 @@ export default function ApprovalsPage() {
         if (error) throw error
 
         if (dbApps && dbApps.length > 0) {
-          const formatted: ApprovalRequest[] = dbApps.map(item => {
+          const formatted: ApprovalRequest[] = dbApps.map((item: any) => {
             const requesterName = (item.requester as any)?.full_name || 'System User'
             const requesterRole = (item.requester as any)?.role ? ` (${(item.requester as any).role.replace('_', ' ')})` : ''
             

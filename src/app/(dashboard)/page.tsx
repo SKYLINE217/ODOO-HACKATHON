@@ -94,18 +94,18 @@ export default function DashboardPage() {
 
       // Data extraction with safe fallbacks
       const rfqs = rfqRes.data || []
-      const activeRfqs = rfqs.filter(r => r.status === 'published').length
-      const draftRfqs = rfqs.filter(r => r.status === 'draft').length
+      const activeRfqs = rfqs.filter((r: any) => r.status === 'published').length
+      const draftRfqs = rfqs.filter((r: any) => r.status === 'draft').length
 
       const vendors = vendorRes.data || []
-      const activeVendors = vendors.filter(v => v.status === 'active').length
-      const pendingVendors = vendors.filter(v => v.status === 'pending').length
+      const activeVendors = vendors.filter((v: any) => v.status === 'active').length
+      const pendingVendors = vendors.filter((v: any) => v.status === 'pending').length
 
       const approvalCount = approvalRes.data?.length || 0
 
       const invoices = spendRes.data || []
-      const totalSpend = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (Number(i.total_amount) || 0), 0)
-      const totalCommitted = invoices.reduce((s, i) => s + (Number(i.total_amount) || 0), 0)
+      const totalSpend = invoices.filter((i: any) => i.status === 'paid').reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
+      const totalCommitted = invoices.reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
 
       setKpis([
         {
