@@ -81,24 +81,59 @@ export function useAuth() {
     if (initialized.current) return
     initialized.current = true
 
+    // ── Helper: read bypass cookie (runs regardless of Supabase state) ──────
+    function readBypassCookie(): boolean {
+      if (typeof window === 'undefined') return false
+      const bypassCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('sb-bypass-session='))
+      if (!bypassCookie) return false
+      try {
+        const raw = bypassCookie.split('=').slice(1).join('=')
+        const decoded = JSON.parse(decodeURIComponent(raw))
+        if (!decoded?.id) return false
+        setUser({
+          id: decoded.id,
+          full_name: decoded.full_name || 'Demo User',
+          email: decoded.email || '',
+          role: decoded.role || 'admin',
+          avatar_url: decoded.avatar_url || null,
+          department: decoded.department || null,
+          phone: decoded.phone || null,
+          onboarded: decoded.onboarded !== false,
+        })
+        setLoading(false)
+        return true
+      } catch {
+        document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+        return false
+      }
+    }
+
     async function bootstrap() {
       try {
         setLoading(true)
 
-        // Get Supabase session
-        const { data: { session } } = await supabase.auth.getSession()
+        // 1. Try real Supabase session first
+        let session: any = null
+        try {
+          const result = await supabase.auth.getSession()
+          session = result.data?.session ?? null
+        } catch {
+          // Supabase unreachable — fall through to bypass cookie below
+        }
 
         if (session?.user) {
-          // Clear any local bypass cookie since we have a real Supabase session
+          // Clear any local bypass cookie — real session takes priority
           if (typeof window !== 'undefined') {
             document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
           }
-          
-          // ✅ KEY FIX: Set user IMMEDIATELY from session data — no DB round-trip needed.
+
+          // Set user immediately from session so dashboard loads fast
           setUser(sessionToUser(session))
           setLoading(false)
 
-          // Then enhance with full DB profile in background (non-blocking)
+          // Enhance with full DB profile in background (non-blocking)
           const meta = session.user.user_metadata || {}
           fetchOrCreateProfile(
             session.user.id,
@@ -106,44 +141,22 @@ export function useAuth() {
             meta.full_name || meta.name || '',
           ).then(profile => {
             if (profile) {
-              setUser({
-                ...profile,
-                onboarded: !!meta.onboarded
-              })
+              setUser({ ...profile, onboarded: !!meta.onboarded })
             }
           }).catch(() => {/* keep session-based user — DB unavailable */})
-        } else {
-          // No real Supabase session, check for bypass cookie
-          if (typeof window !== 'undefined') {
-            const bypassCookie = document.cookie
-              .split('; ')
-              .find(row => row.startsWith('sb-bypass-session='))
-            if (bypassCookie) {
-              try {
-                const raw = bypassCookie.split('=').slice(1).join('=')
-                const decoded = JSON.parse(decodeURIComponent(raw))
-                setUser({
-                  id: decoded.id || 'demo-user-id',
-                  full_name: decoded.full_name || 'Demo User',
-                  email: decoded.email || '',
-                  role: decoded.role || 'admin',
-                  avatar_url: decoded.avatar_url || null,
-                  department: decoded.department || null,
-                  phone: decoded.phone || null,
-                  onboarded: decoded.onboarded !== false, // default true for bypass if not explicitly false
-                })
-                setLoading(false)
-                return
-              } catch {
-                document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-              }
-            }
-          }
+          return
         }
-      } catch {
-        // Auth unavailable — leave user null
-      } finally {
+
+        // 2. No real session — try bypass cookie
+        if (readBypassCookie()) return
+
+        // 3. Truly unauthenticated
         setLoading(false)
+      } catch {
+        // Last resort: try bypass cookie before giving up
+        if (!readBypassCookie()) {
+          setLoading(false)
+        }
       }
     }
 

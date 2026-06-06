@@ -1,13 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Building2, Mail, Lock, ArrowRight, Zap, Shield, Briefcase, Store } from 'lucide-react'
+import { Building2, Mail, Lock, ArrowRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
 
   const [email, setEmail] = useState('')
@@ -103,15 +101,13 @@ export default function LoginPage() {
       }
 
       if (profile) {
-        // Clear real Supabase session cookies if they exist to avoid conflicts
-        const cookiesToClear = ['sb-access-token', 'sb-refresh-token']
-        cookiesToClear.forEach(name => {
+        // Clear real Supabase session cookies to avoid conflicts
+        for (const name of ['sb-access-token', 'sb-refresh-token']) {
           document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
-        })
+        }
+        // Set bypass cookie, then hard-navigate so cookie is sent with the request
         document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
-        router.replace('/')
-        router.refresh()
-        setLoading(false)
+        window.location.href = '/'
         return
       }
     }
@@ -129,10 +125,8 @@ export default function LoginPage() {
         }
 
         if (data?.user) {
-          // Clear bypass cookie
           document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-          router.replace('/')
-          router.refresh()
+          window.location.href = '/'
           return
         }
       } catch (authErr: any) {
@@ -155,8 +149,7 @@ export default function LoginPage() {
           }
 
           document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400`
-          router.replace('/')
-          router.refresh()
+          window.location.href = '/'
           return
         }
 
