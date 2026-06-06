@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createClient } from '@/utils/supabase/client'
 
 export interface UserProfile {
   id: string
@@ -14,25 +15,28 @@ interface AuthState {
   loading: boolean
   setUser: (user: UserProfile | null) => void
   setLoading: (loading: boolean) => void
-  logout: () => void
+  logout: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: {
-    id: 'demo-user-id',
-    full_name: 'Alex Mercer',
-    email: 'alex.mercer@vendorbridge.io',
-    role: 'admin',
-    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces',
-    department: 'Procurement & Logistics'
-  },
-  loading: false,
+  user: null,
+  loading: true,
   setUser: (user) => set({ user }),
   setLoading: (loading) => set({ loading }),
-  logout: () => {
-    if (typeof window !== 'undefined') {
-      document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+  logout: async () => {
+    try {
+      // Sign out from Supabase (no-op if not authenticated via Supabase)
+      const supabase = createClient()
+      await supabase.auth.signOut()
+    } catch (err) {
+      console.warn('Supabase signOut failed (may be using bypass mode):', err)
     }
+
+    // Clear bypass cookie
+    if (typeof window !== 'undefined') {
+      document.cookie = 'sb-bypass-session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax'
+    }
+
     set({ user: null })
   }
 }))

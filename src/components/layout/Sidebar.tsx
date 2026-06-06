@@ -12,8 +12,8 @@ import {
   Receipt, 
   Activity, 
   BarChart3,
-  LogOut,
-  Building2
+  Building2,
+  UserCircle
 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -31,10 +31,9 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { user, logout } = useAuth()
+  const { user } = useAuth()
 
-  const userRole = user?.role || 'admin' // default fallback to admin for testing
-
+  const userRole = user?.role || 'admin'
   const filteredNavItems = navItems.filter((item) => item.allowedRoles.includes(userRole))
 
   return (
@@ -79,35 +78,34 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* User profile footer */}
+      {/* User Profile Footer */}
       {user && (
         <div className="p-4 border-t border-slate-800 bg-slate-900/50">
-          <div className="flex items-center gap-3 mb-3">
+          <Link
+            href="/profile"
+            className={`flex items-center gap-3 p-2.5 rounded-xl hover:bg-slate-800 transition-colors group ${
+              pathname === '/profile' ? 'bg-slate-800' : ''
+            }`}
+          >
             {user.avatar_url ? (
               <img
                 src={user.avatar_url}
                 alt={user.full_name}
-                className="w-10 h-10 rounded-full object-cover border-2 border-indigo-500/20"
+                className="w-9 h-9 rounded-full object-cover border-2 border-slate-700 group-hover:border-indigo-500/50 transition-colors"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-sm">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-white font-bold text-sm">
                 {user.full_name.charAt(0)}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-200 truncate">{user.full_name}</p>
+              <p className="text-sm font-semibold text-slate-200 truncate group-hover:text-white transition-colors">{user.full_name}</p>
               <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/10 capitalize mt-0.5">
                 {user.role.replace('_', ' ')}
               </span>
             </div>
-          </div>
-          <button
-            onClick={() => logout()}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors duration-200"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
+            <UserCircle size={15} className="text-slate-600 group-hover:text-slate-400 shrink-0 transition-colors" />
+          </Link>
         </div>
       )}
     </aside>
