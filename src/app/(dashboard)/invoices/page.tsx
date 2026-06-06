@@ -214,38 +214,38 @@ export default function InvoicesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Vendor Invoices</h2>
-          <p className="text-slate-500 text-sm mt-1">Verify billing line items, GST splits (CGST/SGST/IGST), and process payments.</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight font-display">Vendor Invoices</h2>
+          <p className="text-slate-400 text-sm mt-1">Verify billing line items, GST splits (CGST/SGST/IGST), and process payments.</p>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-[var(--bg-surface)] border border-[var(--border-default)] p-4 rounded-xl shadow-sm">
         <div className="relative w-full md:w-96 group">
           <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-            <Search size={18} className="text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
+            <Search size={18} className="text-slate-500 group-focus-within:text-[var(--accent)] transition-colors" />
           </span>
           <input
             type="text"
             placeholder="Search invoice number, PO, vendor..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg text-sm placeholder-slate-500 focus:outline-none focus:border-[var(--accent)] transition-all text-white"
           />
         </div>
         <div className="flex gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 w-full md:w-auto">
-            <Filter size={16} className="text-slate-500" />
+          <div className="flex items-center gap-2 bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-lg px-3 py-1.5 w-full md:w-auto">
+            <Filter size={16} className="text-slate-400" />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="bg-transparent text-sm text-slate-600 focus:outline-none cursor-pointer w-full font-medium"
+              className="bg-transparent text-sm text-slate-300 focus:outline-none cursor-pointer w-full font-medium"
             >
-              <option value="all">All Invoices</option>
-              <option value="sent">Sent</option>
-              <option value="paid">Paid</option>
-              <option value="overdue">Overdue</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all" className="bg-[var(--bg-subtle)] text-white">All Invoices</option>
+              <option value="sent" className="bg-[var(--bg-subtle)] text-white">Sent</option>
+              <option value="paid" className="bg-[var(--bg-subtle)] text-white">Paid</option>
+              <option value="overdue" className="bg-[var(--bg-subtle)] text-white">Overdue</option>
+              <option value="cancelled" className="bg-[var(--bg-subtle)] text-white">Cancelled</option>
             </select>
           </div>
         </div>
@@ -253,13 +253,13 @@ export default function InvoicesPage() {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 size={32} className="text-indigo-600 animate-spin" />
-          <span className="text-xs text-slate-500 font-semibold">Loading invoices list...</span>
+          <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
+          <span className="text-xs text-slate-400 font-semibold">Loading invoices list...</span>
         </div>
       ) : filteredInvoices.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-          <Receipt size={36} className="text-slate-350 mx-auto mb-3" />
-          <h4 className="font-bold text-slate-800 text-sm">No Invoices Found</h4>
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
+          <Receipt size={36} className="text-slate-650 mx-auto mb-3" />
+          <h4 className="font-bold text-white text-sm">No Invoices Found</h4>
           <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
             There are no invoices matching your filters.
           </p>
@@ -267,26 +267,26 @@ export default function InvoicesPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {filteredInvoices.map((inv) => (
-            <div key={inv.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6">
+            <div key={inv.id} className="card card-hover flex flex-col md:flex-row gap-6">
               <div className="flex-1 space-y-4">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded border border-slate-200 font-mono">
+                      <span className="text-[10px] font-bold text-slate-300 bg-[var(--bg-elevated)] px-2 py-0.5 rounded border border-[var(--border-default)] font-mono">
                         {inv.invoice_number}
                       </span>
-                      <span className="text-xs text-slate-400 font-medium">PO: {inv.po_ref}</span>
+                      <span className="text-xs text-slate-400 font-mono">PO: {inv.po_ref}</span>
                     </div>
-                    <h4 className="font-bold text-slate-800 text-lg leading-tight mt-1.5">{inv.vendor_name}</h4>
+                    <h4 className="font-bold text-white text-lg leading-tight mt-1.5">{inv.vendor_name}</h4>
                     {inv.notes && <p className="text-xs text-slate-400 mt-1">{inv.notes}</p>}
                   </div>
 
                   {/* Status */}
                   <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider ${
-                    inv.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-                    inv.status === 'sent' ? 'bg-blue-50 text-blue-700 border border-blue-100' :
-                    'bg-rose-50 text-rose-700 border border-rose-100'
+                    inv.status === 'paid' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                    inv.status === 'sent' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/25' :
+                    'bg-rose-500/10 text-rose-400 border border-rose-500/25'
                   }`}>
                     {inv.status === 'paid' && <CheckCircle2 size={12} />}
                     {inv.status === 'overdue' && <AlertCircle size={12} />}
@@ -295,50 +295,50 @@ export default function InvoicesPage() {
                 </div>
 
                 {/* Tax Breakdowns Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50/50 border border-slate-100 rounded-lg p-3 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg p-3 text-xs">
                   <div>
-                    <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">Subtotal</span>
-                    <span className="font-bold text-slate-700 block mt-0.5">â‚¹{inv.subtotal.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-500 font-semibold block uppercase tracking-wider text-[9px]">Subtotal</span>
+                    <span className="font-bold text-white block mt-0.5 f1-numbers">{"\u20B9"}{inv.subtotal.toLocaleString('en-IN')}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">CGST / SGST</span>
-                    <span className="font-medium text-slate-700 block mt-0.5">
-                      â‚¹{inv.cgst_amount.toLocaleString('en-IN')} / â‚¹{inv.sgst_amount.toLocaleString('en-IN')}
+                    <span className="text-slate-500 font-semibold block uppercase tracking-wider text-[9px]">CGST / SGST</span>
+                    <span className="font-medium text-white block mt-0.5 f1-numbers text-[11px]">
+                      {"\u20B9"}{inv.cgst_amount.toLocaleString('en-IN')} / {"\u20B9"}{inv.sgst_amount.toLocaleString('en-IN')}
                     </span>
                   </div>
                   {inv.igst_amount > 0 && (
                     <div>
-                      <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">IGST</span>
-                      <span className="font-medium text-slate-700 block mt-0.5">â‚¹{inv.igst_amount.toLocaleString('en-IN')}</span>
+                      <span className="text-slate-500 font-semibold block uppercase tracking-wider text-[9px]">IGST</span>
+                      <span className="font-medium text-white block mt-0.5 f1-numbers">{"\u20B9"}{inv.igst_amount.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   <div>
-                    <span className="text-slate-400 font-semibold block uppercase tracking-wider text-[9px]">Total Tax</span>
-                    <span className="font-medium text-slate-700 block mt-0.5">â‚¹{inv.total_tax.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-500 font-semibold block uppercase tracking-wider text-[9px]">Total Tax</span>
+                    <span className="font-medium text-white block mt-0.5 f1-numbers">{"\u20B9"}{inv.total_tax.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
                 {/* Info footer */}
-                <div className="flex flex-wrap gap-6 text-xs text-slate-500 pt-1">
-                  <span className="flex items-center gap-1.5"><Calendar size={14} /> Due Date: <span className="font-semibold text-slate-700">{inv.due_date}</span></span>
+                <div className="flex flex-wrap gap-6 text-xs text-slate-400 pt-1">
+                  <span className="flex items-center gap-1.5"><Calendar size={14} /> Due Date: <span className="font-semibold text-white">{inv.due_date}</span></span>
                   {inv.paid_at && (
-                    <span className="flex items-center gap-1.5 text-emerald-600"><CheckCircle2 size={14} /> Paid on: <span className="font-semibold">{inv.paid_at}</span></span>
+                    <span className="flex items-center gap-1.5 text-emerald-400"><CheckCircle2 size={14} /> Paid on: <span className="font-semibold">{inv.paid_at}</span></span>
                   )}
                 </div>
               </div>
 
               {/* Valuation and Mark paid */}
-              <div className="md:w-48 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-slate-100 gap-4">
+              <div className="md:w-48 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-4">
                 <div className="text-left md:text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Invoice Total</span>
-                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">â‚¹{inv.total_amount.toLocaleString('en-IN')}</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Invoice Total</span>
+                  <span className="font-extrabold text-white text-xl block mt-0.5 f1-numbers">{"\u20B9"}{inv.total_amount.toLocaleString('en-IN')}</span>
                 </div>
 
                 {inv.status === 'sent' ? (
                   <button
                     onClick={() => handleMarkAsPaid(inv.id)}
                     disabled={actionLoadingId === inv.id}
-                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm hover:shadow transition-all cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
                   >
                     {actionLoadingId === inv.id ? (
                       <Loader2 size={12} className="animate-spin" />
@@ -347,7 +347,7 @@ export default function InvoicesPage() {
                     )}
                   </button>
                 ) : (
-                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-indigo-650 hover:bg-indigo-50/20 border border-slate-200 rounded-lg transition-colors cursor-pointer">
+                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer">
                     <Eye size={14} /> View Details
                   </button>
                 )}

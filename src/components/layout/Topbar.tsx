@@ -50,8 +50,7 @@ export default function Topbar() {
     setLoggingOut(true)
     setShowUserMenu(false)
     await logout()
-    router.replace('/login')
-    router.refresh()
+    window.location.href = '/login'
   }
 
   const unread = notifications.filter(n => !n.read).length

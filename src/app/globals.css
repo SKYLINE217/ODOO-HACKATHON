@@ -4,48 +4,49 @@
 /* ── VendorBridge Design System Tokens ─────────────────── */
 :root {
   /* Backgrounds */
-  --bg-base:        #0A0D14;
-  --bg-surface:     #111827;
-  --bg-elevated:    #1C2333;
-  --bg-subtle:      #1E2A3A;
+  --bg-base:        #0C0C12;
+  --bg-surface:     #15151E;
+  --bg-elevated:    #1F1F2A;
+  --bg-subtle:      #252535;
 
   /* Borders */
-  --border-default: #1F2D40;
-  --border-strong:  #2A3A52;
-  --border-accent:  #F59E0B;
+  --border-default: #252530;
+  --border-strong:  #353545;
+  --border-accent:  #E10600;
 
   /* Text */
-  --text-primary:   #F0F4F8;
-  --text-secondary: #8A99B0;
-  --text-muted:     #4A5568;
-  --text-inverse:   #0A0D14;
+  --text-primary:   #FFFFFF;
+  --text-secondary: #9494A0;
+  --text-muted:     #575765;
+  --text-inverse:   #FFFFFF;
 
-  /* Accent — Amber Gold */
-  --accent:         #F59E0B;
-  --accent-hover:   #D97706;
-  --accent-subtle:  rgba(245, 158, 11, 0.08);
-  --accent-glow:    rgba(245, 158, 11, 0.15);
+  /* Accent — F1 Red */
+  --accent:         #E10600;
+  --accent-hover:   #B80500;
+  --accent-subtle:  rgba(225, 6, 0, 0.08);
+  --accent-glow:    rgba(225, 6, 0, 0.15);
 
   /* Semantic */
-  --success:        #10B981;
-  --success-subtle: rgba(16, 185, 129, 0.08);
-  --warning:        #F59E0B;
-  --warning-subtle: rgba(245, 158, 11, 0.08);
+  --success:        #00D26A;
+  --success-subtle: rgba(0, 210, 106, 0.08);
+  --warning:        #FF9F0A;
+  --warning-subtle: rgba(255, 159, 10, 0.08);
   --danger:         #EF4444;
   --danger-subtle:  rgba(239, 68, 68, 0.08);
   --info:           #3B82F6;
   --info-subtle:    rgba(59, 130, 246, 0.08);
 
   /* Shadows */
-  --shadow-sm:     0 1px 3px rgba(0,0,0,0.4);
-  --shadow-md:     0 4px 16px rgba(0,0,0,0.5);
-  --shadow-lg:     0 12px 40px rgba(0,0,0,0.6);
-  --shadow-accent: 0 0 24px rgba(245, 158, 11, 0.12);
+  --shadow-sm:     0 1px 3px rgba(0,0,0,0.5);
+  --shadow-md:     0 4px 20px rgba(0,0,0,0.7);
+  --shadow-lg:     0 12px 48px rgba(0,0,0,0.8);
+  --shadow-accent: 0 0 24px rgba(225, 6, 0, 0.12);
 
   /* Fonts */
-  --font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-rajdhani), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-body:    var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono:    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-mono:    var(--font-orbitron), var(--font-rajdhani), monospace;
+  --font-numbers: var(--font-orbitron), var(--font-rajdhani), monospace;
 }
 
 /* ── Base Reset ───────────────────────────────────────── */
@@ -196,14 +197,18 @@ body {
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-default);
-  border-radius: 12px;
+  border-left: 3px solid var(--border-default);
+  border-radius: 8px;
   padding: 24px;
-  transition: border-color 200ms, box-shadow 200ms, transform 200ms;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 200ms, border-left-color 200ms, box-shadow 200ms, transform 200ms;
 }
 .card-hover:hover {
   border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-left-color: var(--accent);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(225, 6, 0, 0.08);
+  transform: translateY(-2px);
 }
 
 /* ── Table ────────────────────────────────────────────── */
@@ -238,3 +243,10 @@ body {
 }
 .tbl-row td.mono { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
 .tbl-row td.amount { font-family: var(--font-mono); font-size: 13px; font-weight: 500; text-align: right; }
+
+/* ── F1 Telemetry Numbers ─────────────────────────────── */
+.f1-numbers {
+  font-family: var(--font-numbers) !important;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}

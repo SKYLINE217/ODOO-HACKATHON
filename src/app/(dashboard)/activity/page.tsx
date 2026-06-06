@@ -42,7 +42,7 @@ const mockLogs: ActivityLog[] = [
     entity_type: 'purchase_order',
     entity_id: 'PO-2026-00009',
     action: 'APPROVE',
-    description: 'Approved purchase order value â‚¹8,14,200',
+    description: 'Approved purchase order value \u20B98,14,200',
     performed_by: 'Sarah Connor (Manager)',
     performed_at: '2026-06-06 08:20:45',
     ip_address: '192.168.1.50'

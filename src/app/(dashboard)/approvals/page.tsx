@@ -196,23 +196,23 @@ export default function ApprovalsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800 tracking-tight">Approvals Queue</h2>
-          <p className="text-slate-500 text-sm mt-1">Review requisition bids, purchase orders, and vendor invoices.</p>
+          <h2 className="text-2xl font-bold text-white tracking-tight font-display">Approvals Queue</h2>
+          <p className="text-slate-400 text-sm mt-1">Review requisition bids, purchase orders, and vendor invoices.</p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-50 text-amber-700 border border-amber-250 self-start sm:self-auto">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/25 self-start sm:self-auto">
           <AlertCircle size={14} /> {pendingCount} Pending Approvals
         </span>
       </div>
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3">
-          <Loader2 size={32} className="text-indigo-600 animate-spin" />
-          <span className="text-xs text-slate-500 font-semibold">Loading approvals queue...</span>
+          <Loader2 size={32} className="text-[var(--accent)] animate-spin" />
+          <span className="text-xs text-slate-400 font-semibold">Loading approvals queue...</span>
         </div>
       ) : approvals.length === 0 ? (
-        <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
-          <ShieldAlert size={36} className="text-slate-350 mx-auto mb-3" />
-          <h4 className="font-bold text-slate-800 text-sm">Approvals Queue Empty</h4>
+        <div className="bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-xl p-12 text-center shadow-sm">
+          <ShieldAlert size={36} className="text-slate-650 mx-auto mb-3" />
+          <h4 className="font-bold text-white text-sm">Approvals Queue Empty</h4>
           <p className="text-slate-400 text-xs mt-1.5 max-w-sm mx-auto">
             There are currently no active approval requests waiting for action.
           </p>
@@ -220,15 +220,15 @@ export default function ApprovalsPage() {
       ) : (
         <div className="grid grid-cols-1 gap-6">
           {approvals.map((req) => (
-            <div key={req.id} className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row gap-6">
+            <div key={req.id} className="card card-hover flex flex-col md:flex-row gap-6">
               <div className="flex-1 space-y-4">
                 {/* Type Badge & Date */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded border capitalize font-mono ${
-                      req.entity_type === 'purchase_order' ? 'bg-indigo-50 border-indigo-100 text-indigo-700' :
-                      req.entity_type === 'invoice' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
-                      'bg-amber-50 border-amber-100 text-amber-700'
+                      req.entity_type === 'purchase_order' ? 'bg-indigo-500/10 border-indigo-500/25 text-indigo-400' :
+                      req.entity_type === 'invoice' ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400' :
+                      'bg-amber-500/10 border-amber-500/25 text-amber-400'
                     }`}>
                       {req.entity_type.replace('_', ' ')}
                     </span>
@@ -237,9 +237,9 @@ export default function ApprovalsPage() {
                   
                   {/* Status indicator */}
                   <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase ${
-                    req.status === 'approved' ? 'bg-emerald-50 text-emerald-700' :
-                    req.status === 'rejected' ? 'bg-rose-50 text-rose-700' :
-                    'bg-amber-50 text-amber-700'
+                    req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/25' :
+                    req.status === 'rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/25' :
+                    'bg-amber-500/10 text-amber-400 border border-amber-500/25'
                   }`}>
                     {req.status}
                   </span>
@@ -247,13 +247,13 @@ export default function ApprovalsPage() {
 
                 {/* Title & Requester */}
                 <div>
-                  <h4 className="font-bold text-slate-800 text-base leading-snug">{req.title}</h4>
-                  <p className="text-xs text-slate-500 mt-1 leading-normal">
-                    Requested by <span className="font-semibold text-slate-700">{req.requester}</span> on {req.date_requested}
+                  <h4 className="font-bold text-white text-base leading-snug">{req.title}</h4>
+                  <p className="text-xs text-slate-400 mt-1 leading-normal">
+                    Requested by <span className="font-semibold text-slate-200">{req.requester}</span> on {req.date_requested}
                   </p>
                   {req.remarks && (
-                    <p className="text-xs text-slate-500 bg-slate-50 border border-slate-100 rounded-lg p-2.5 mt-3 leading-normal">
-                      <span className="font-semibold text-slate-600 block mb-0.5">Requester Notes:</span>
+                    <p className="text-xs text-slate-400 bg-[var(--bg-elevated)] border border-[var(--border-default)] rounded-lg p-2.5 mt-3 leading-normal">
+                      <span className="font-semibold text-slate-300 block mb-0.5">Requester Notes:</span>
                       {req.remarks}
                     </p>
                   )}
@@ -261,10 +261,10 @@ export default function ApprovalsPage() {
               </div>
 
               {/* Valuation and Quick Action buttons */}
-              <div className="md:w-56 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-slate-100 gap-4">
+              <div className="md:w-56 flex flex-row md:flex-col justify-between md:justify-center items-center md:items-stretch pl-0 md:pl-6 md:border-l border-[var(--border-default)] gap-4">
                 <div className="text-left md:text-center">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Requisition Value</span>
-                  <span className="font-extrabold text-slate-800 text-xl block mt-0.5">â‚¹{req.amount.toLocaleString('en-IN')}</span>
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Requisition Value</span>
+                  <span className="font-extrabold text-white text-xl block mt-0.5 f1-numbers">{"\u20B9"}{req.amount.toLocaleString('en-IN')}</span>
                 </div>
 
                 {req.status === 'pending' ? (
@@ -272,7 +272,7 @@ export default function ApprovalsPage() {
                     <button
                       onClick={() => handleAction(req.id, 'rejected')}
                       disabled={actionLoadingId === req.id}
-                      className="flex-1 inline-flex items-center justify-center p-2 text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-200 hover:border-rose-600 rounded-lg transition-colors cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center p-2 text-rose-400 hover:text-white hover:bg-rose-600 border border-rose-500/20 hover:border-rose-600 rounded-lg transition-all cursor-pointer"
                       title="Reject Request"
                     >
                       {actionLoadingId === req.id ? (
@@ -284,7 +284,7 @@ export default function ApprovalsPage() {
                     <button
                       onClick={() => handleAction(req.id, 'approved')}
                       disabled={actionLoadingId === req.id}
-                      className="flex-1 inline-flex items-center justify-center p-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm hover:shadow transition-colors cursor-pointer"
+                      className="flex-1 inline-flex items-center justify-center p-2 text-white bg-[var(--accent)] hover:bg-[var(--accent-hover)] rounded-lg shadow-sm transition-all cursor-pointer"
                       title="Approve Request"
                     >
                       {actionLoadingId === req.id ? (
@@ -295,7 +295,7 @@ export default function ApprovalsPage() {
                     </button>
                   </div>
                 ) : (
-                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/20 border border-slate-200 hover:border-indigo-100 rounded-lg transition-colors cursor-pointer">
+                  <button className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-300 hover:text-white hover:bg-[var(--bg-elevated)] border border-[var(--border-strong)] rounded-lg transition-colors cursor-pointer">
                     <Eye size={14} /> Review Details
                   </button>
                 )}
