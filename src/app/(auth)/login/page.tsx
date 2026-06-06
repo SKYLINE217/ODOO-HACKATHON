@@ -6,19 +6,25 @@ import { Building2, Mail, Lock, ArrowRight } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 
 // ── Helper: set bypass session via server-side API route ───────────────────
-// This is more reliable than document.cookie on Vercel HTTPS (edge runtime)
+// The API sets the cookie AND returns a redirect — both in one response.
+// This guarantees the cookie is committed before the browser navigates.
 async function setBypassSession(profile: object): Promise<void> {
   try {
-    const res = await fetch('/api/auth/set-session', {
+    // redirect:'follow' lets the browser follow the 302 from the API route,
+    // committing the Set-Cookie header before the page changes.
+    await fetch('/api/auth/set-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(profile),
       credentials: 'same-origin',
+      redirect: 'follow',
     })
-    if (!res.ok) throw new Error('API error')
+    // The fetch followed the redirect to '/'. Now navigate there.
+    window.location.href = '/'
   } catch {
-    // Fallback: set client-side cookie if API fails
+    // Fallback: set client-side cookie if API fails, then navigate
     document.cookie = `sb-bypass-session=${encodeURIComponent(JSON.stringify(profile))}; path=/; max-age=86400; SameSite=Lax`
+    window.location.href = '/'
   }
 }
 

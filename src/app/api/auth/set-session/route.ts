@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 // POST /api/auth/set-session
-// Sets the bypass session cookie server-side — more reliable than document.cookie on Vercel HTTPS
+// Sets the bypass session cookie AND redirects to dashboard in ONE response.
+// This guarantees the cookie is committed before the browser navigates — no race condition.
 export async function POST(request: NextRequest) {
   try {
     const profile = await request.json()
@@ -10,15 +11,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid profile' }, { status: 400 })
     }
 
-    const response = NextResponse.json({ ok: true })
+    // Redirect to dashboard — the Set-Cookie in a redirect response is guaranteed
+    // to be committed before the browser follows the Location header.
+    const redirectTo = profile.onboarded === false ? '/onboarding' : '/'
+    const response = NextResponse.redirect(new URL(redirectTo, request.url), { status: 302 })
 
-    // Set cookie server-side — guarantees correct attributes on HTTPS
     response.cookies.set('sb-bypass-session', encodeURIComponent(JSON.stringify(profile)), {
       path: '/',
       maxAge: 86400,
-      httpOnly: false,       // Must be false so client JS (useAuth) can read it
+      httpOnly: false,       // Must be false so client-side useAuth can read it via document.cookie
       sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production', // Secure only on HTTPS
+      secure: process.env.NODE_ENV === 'production',
     })
 
     return response
@@ -27,10 +30,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE /api/auth/set-session
-// Clears the bypass session cookie
-export async function DELETE() {
-  const response = NextResponse.json({ ok: true })
+// DELETE /api/auth/set-session — clears the bypass session cookie
+export async function DELETE(request: NextRequest) {
+  const response = NextResponse.redirect(new URL('/login', request.url), { status: 302 })
   response.cookies.set('sb-bypass-session', '', {
     path: '/',
     maxAge: 0,
