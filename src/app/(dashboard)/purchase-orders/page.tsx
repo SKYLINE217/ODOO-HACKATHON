@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useSearchStore } from '@/stores/useSearchStore'
+import { useAuth } from '@/hooks/useAuth'
 
 interface PurchaseOrder {
   id: string
@@ -61,6 +62,7 @@ const initialPos: PurchaseOrder[] = [
 const supabase = createClient()
 
 export default function PurchaseOrdersPage() {
+  const { user } = useAuth()
   const [pos, setPos] = useState<PurchaseOrder[]>([])
   const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
   
@@ -75,9 +77,10 @@ export default function PurchaseOrdersPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!user) return
     async function loadPurchaseOrders() {
       try {
-        const { data: dbPos, error } = await supabase
+        let query = supabase
           .from('purchase_orders')
           .select(`
             id,
@@ -88,10 +91,17 @@ export default function PurchaseOrdersPage() {
             total_amount,
             delivery_date,
             issued_at,
+            vendor_id,
             vendor:vendors(company_name),
             quotation:quotations(quotation_number)
           `)
-          .order('issued_at', { ascending: false })
+
+        if (user?.role === 'vendor') {
+          const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+          query = query.eq('vendor_id', activeVendorId)
+        }
+
+        const { data: dbPos, error } = await query.order('issued_at', { ascending: false })
 
         if (error) throw error
 
@@ -113,19 +123,28 @@ export default function PurchaseOrdersPage() {
         } else {
           // Fallback to local storage or initial values
           const localPos = JSON.parse(localStorage.getItem('vb_purchase_orders_mock') || '[]')
-          setPos([...localPos, ...initialPos])
+          const combined = [...localPos, ...initialPos]
+          if (user?.role === 'vendor') {
+            setPos([]) // No access to global mocks for new vendor accounts
+          } else {
+            setPos(combined)
+          }
           setIsDbMode(false)
         }
       } catch (err) {
         const localPos = JSON.parse(localStorage.getItem('vb_purchase_orders_mock') || '[]')
-        setPos([...localPos, ...initialPos])
+        if (user?.role === 'vendor') {
+          setPos([])
+        } else {
+          setPos([...localPos, ...initialPos])
+        }
         setIsDbMode(false)
       } finally {
         setLoading(false)
       }
     }
     loadPurchaseOrders()
-  }, [])
+  }, [user])
 
   const filteredPos = pos.filter((p) => {
     const matchesSearch = p.po_number.toLowerCase().includes(searchTerm.toLowerCase()) || 

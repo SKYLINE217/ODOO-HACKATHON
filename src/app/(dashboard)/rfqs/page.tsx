@@ -118,13 +118,18 @@ export default function RfqsPage() {
     return () => window.removeEventListener('keydown', handler)
   }, [])
 
-  // Load RFQs — SWR: instant from cache, revalidates in background
   useEffect(() => {
+    if (!user) return
     async function fetchRfqs(): Promise<RFQ[]> {
-      const { data, error } = await supabase
+      let query = supabase
         .from('rfqs')
         .select('id, rfq_number, title, description, status, deadline, budget_estimate, rfq_items(item_name, quantity, unit, description)')
-        .order('created_at', { ascending: false })
+
+      if (user?.role === 'vendor') {
+        query = query.neq('status', 'draft')
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
       return (data || []).map((r: any) => ({
         id: r.id,
@@ -141,10 +146,11 @@ export default function RfqsPage() {
         }))
       }))
     }
-    swr('rfqs:list', fetchRfqs, fresh => { if (fresh.length > 0) setRfqs(fresh) })
+    const cacheKey = `rfqs:list:${user.role}`
+    swr(cacheKey, fetchRfqs, fresh => { if (fresh.length > 0) setRfqs(fresh) })
       .then(data => { if (data.length > 0) setRfqs(data) })
       .catch(() => { const s = localStorage.getItem('vb_rfqs'); if (s) try { setRfqs(JSON.parse(s)) } catch {} })
-  }, [])
+  }, [user])
 
   const handleAddItemRow = () => {
     setFormItems([...formItems, { item_name: '', quantity: 1, unit: 'units', description: '' }])
@@ -225,6 +231,9 @@ export default function RfqsPage() {
   }
 
   const filteredRfqs = rfqs.filter((r) => {
+    // Strict access check: vendors cannot see draft RFQs
+    if (user?.role === 'vendor' && r.status === 'draft') return false
+
     const matchesSearch = r.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           r.rfq_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           r.description.toLowerCase().includes(searchTerm.toLowerCase())

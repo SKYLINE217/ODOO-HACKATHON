@@ -118,12 +118,29 @@ export default function QuotationsPage() {
 
   // Fetch RFQs list on mount
   useEffect(() => {
+    if (!user) return
     async function loadRFQs() {
       try {
-        const { data: dbRfqs, error } = await supabase
+        let query = supabase
           .from('rfqs')
           .select('id, rfq_number, title')
-          .order('created_at', { ascending: false })
+
+        if (user?.role === 'vendor') {
+          const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+          const { data: vQuotes } = await supabase
+            .from('quotations')
+            .select('rfq_id')
+            .eq('vendor_id', activeVendorId)
+
+          const rfqIds = (vQuotes || []).map((q: any) => q.rfq_id)
+          if (rfqIds.length > 0) {
+            query = query.in('id', rfqIds)
+          } else {
+            query = query.eq('id', '00000000-0000-0000-0000-000000000000')
+          }
+        }
+
+        const { data: dbRfqs, error } = await query.order('created_at', { ascending: false })
 
         if (error) throw error
 
@@ -132,21 +149,31 @@ export default function QuotationsPage() {
           setSelectedRfqId(dbRfqs[0].id)
           setIsDbMode(true)
         } else {
-          // No RFQs in DB yet, fallback to mock
-          setRfqList([{ id: 'mock', rfq_number: 'RFQ-2026-00042', title: 'Server Hardware Upgrade (Demo)' }])
-          setSelectedRfqId('mock')
+          // No RFQs in DB yet, fallback to mock (only for non-vendors)
+          if (user?.role === 'vendor') {
+            setRfqList([])
+            setSelectedRfqId('')
+          } else {
+            setRfqList([{ id: 'mock', rfq_number: 'RFQ-2026-00042', title: 'Server Hardware Upgrade (Demo)' }])
+            setSelectedRfqId('mock')
+          }
           setIsDbMode(false)
         }
       } catch (err) {
-        setRfqList([{ id: 'mock', rfq_number: 'RFQ-2026-00042', title: 'Server Hardware Upgrade (Demo)' }])
-        setSelectedRfqId('mock')
+        if (user?.role === 'vendor') {
+          setRfqList([])
+          setSelectedRfqId('')
+        } else {
+          setRfqList([{ id: 'mock', rfq_number: 'RFQ-2026-00042', title: 'Server Hardware Upgrade (Demo)' }])
+          setSelectedRfqId('mock')
+        }
         setIsDbMode(false)
       } finally {
         setLoading(false)
       }
     }
     loadRFQs()
-  }, [])
+  }, [user])
 
   // Fetch details when Selected RFQ changes
   useEffect(() => {
@@ -190,7 +217,7 @@ export default function QuotationsPage() {
         if (itemsErr) throw itemsErr
 
         // 2. Fetch quotations and quotation line items for this RFQ
-        const { data: quotes, error: quotesErr } = await supabase
+        let quotesQuery = supabase
           .from('quotations')
           .select(`
             id,
@@ -207,6 +234,13 @@ export default function QuotationsPage() {
             vendor:vendors(id, company_name)
           `)
           .eq('rfq_id', selectedRfqId)
+
+        if (user?.role === 'vendor') {
+          const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+          quotesQuery = quotesQuery.eq('vendor_id', activeVendorId)
+        }
+
+        const { data: quotes, error: quotesErr } = await quotesQuery
 
         if (quotesErr) throw quotesErr
 
@@ -268,7 +302,7 @@ export default function QuotationsPage() {
     }
 
     loadRfqDetails()
-  }, [selectedRfqId])
+  }, [selectedRfqId, user])
 
   // Find lowest price for a specific item among all quotations
   const getLowestPrice = (itemName: string) => {
@@ -585,38 +619,40 @@ export default function QuotationsPage() {
                   </tr>
 
                   {/* Award Action Rows */}
-                  <tr>
-                    <td className="p-4 font-bold text-[var(--text-secondary)] text-xs font-mono">Award Contract</td>
-                    {rfqDetail.quotations.map((quo, idx) => (
-                      <td key={idx} className="p-4 text-center border-l border-[var(--border-default)]">
-                        {quo.status === 'awarded' ? (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 text-xs font-bold font-mono">
-                            <CheckCircle2 size={14} /> Awarded
-                          </span>
-                        ) : quo.status === 'rejected' ? (
-                          <span className="text-xs text-[var(--text-muted)] font-semibold italic">Rejected</span>
-                        ) : (
-                          <button
-                            onClick={() => handleAwardContract(quo)}
-                            disabled={awardedVendor !== null || actionLoading}
-                            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all border cursor-pointer font-mono ${
-                              awardedVendor !== null || actionLoading
-                                ? 'bg-[var(--bg-subtle)] border-[var(--border-default)] text-[var(--text-muted)] pointer-events-none'
-                                : 'bg-[var(--bg-subtle)] hover:bg-[var(--accent)] border-[var(--border-strong)] hover:border-[var(--accent)] text-[var(--text-secondary)] hover:text-white'
-                            }`}
-                          >
-                            {actionLoading ? (
-                              <Loader2 size={14} className="animate-spin" />
-                            ) : (
-                              <>
-                                <Award size={14} /> Award
-                              </>
-                            )}
-                          </button>
-                        )}
-                      </td>
-                    ))}
-                  </tr>
+                  {user?.role !== 'vendor' && (
+                    <tr>
+                      <td className="p-4 font-bold text-[var(--text-secondary)] text-xs font-mono">Award Contract</td>
+                      {rfqDetail.quotations.map((quo, idx) => (
+                        <td key={idx} className="p-4 text-center border-l border-[var(--border-default)]">
+                          {quo.status === 'awarded' ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1 rounded bg-emerald-500/10 text-emerald-500 border border-emerald-500/25 text-xs font-bold font-mono">
+                              <CheckCircle2 size={14} /> Awarded
+                            </span>
+                          ) : quo.status === 'rejected' ? (
+                            <span className="text-xs text-[var(--text-muted)] font-semibold italic">Rejected</span>
+                          ) : (
+                            <button
+                              onClick={() => handleAwardContract(quo)}
+                              disabled={awardedVendor !== null || actionLoading}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-all border cursor-pointer font-mono ${
+                                awardedVendor !== null || actionLoading
+                                  ? 'bg-[var(--bg-subtle)] border-[var(--border-default)] text-[var(--text-muted)] pointer-events-none'
+                                  : 'bg-[var(--bg-subtle)] hover:bg-[var(--accent)] border-[var(--border-strong)] hover:border-[var(--accent)] text-[var(--text-secondary)] hover:text-white'
+                              }`}
+                            >
+                              {actionLoading ? (
+                                <Loader2 size={14} className="animate-spin" />
+                              ) : (
+                                <>
+                                  <Award size={14} /> Award
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>

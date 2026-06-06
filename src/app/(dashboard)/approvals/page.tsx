@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useSearchStore } from '@/stores/useSearchStore'
+import { useAuth } from '@/hooks/useAuth'
 
 interface ApprovalRequest {
   id: string
@@ -66,6 +67,7 @@ const initialApprovals: ApprovalRequest[] = [
 const supabase = createClient()
 
 export default function ApprovalsPage() {
+  const { user } = useAuth()
   const [approvals, setApprovals] = useState<ApprovalRequest[]>([])
   const [selectedApproval, setSelectedApproval] = useState<ApprovalRequest | null>(null)
   const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
@@ -80,6 +82,12 @@ export default function ApprovalsPage() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!user) return
+    if (user.role === 'vendor') {
+      setLoading(false)
+      return
+    }
+
     async function loadApprovals() {
       try {
         const { data: dbApps, error } = await supabase
@@ -108,10 +116,10 @@ export default function ApprovalsPage() {
             return {
               id: item.id,
               entity_type: 'quotation', // Linked to quotations
-              entity_number: (item.quotation as any)?.quotation_number || 'QUO-Manual',
-              title: `Approve quotation for: ${(item.quotation as any)?.rfq?.title || 'Procurement Proposal'}`,
+              entity_number: (item.quotation as any)?.quotation_number || 'QUO-Ref',
+              title: (item.quotation as any)?.rfq?.title || 'Quotation Review Request',
               requester: requesterName + requesterRole,
-              amount: Number((item.quotation as any)?.total_amount || 0),
+              amount: Number((item.quotation as any)?.total_amount) || 0,
               status: item.status as any,
               date_requested: item.requested_at ? item.requested_at.split('T')[0] : 'N/A',
               remarks: item.remarks || undefined
@@ -134,7 +142,7 @@ export default function ApprovalsPage() {
       }
     }
     loadApprovals()
-  }, [])
+  }, [user])
 
   const handleAction = async (id: string, action: 'approved' | 'rejected') => {
     setActionLoadingId(id)
@@ -189,6 +197,18 @@ export default function ApprovalsPage() {
       (req.remarks || '').toLowerCase().includes(search)
     )
   })
+
+  if (user?.role === 'vendor') {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[450px] text-center p-12 bg-[var(--bg-surface)] border border-[var(--border-default)] rounded-2xl shadow-sm font-sans">
+        <ShieldAlert size={48} className="text-rose-500 mb-4" />
+        <h3 className="text-lg font-bold text-[var(--text-primary)] font-display">Access Denied</h3>
+        <p className="text-sm text-[var(--text-secondary)] mt-2 max-w-md">
+          Your account is configured as a Vendor Partner. You do not have permission to view or manage internal manager approval requests.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

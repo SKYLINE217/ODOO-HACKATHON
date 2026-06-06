@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { useSearchStore } from '@/stores/useSearchStore'
+import { useAuth } from '@/hooks/useAuth'
 
 interface Invoice {
   id: string
@@ -71,6 +72,7 @@ const initialInvoices: Invoice[] = [
 const supabase = createClient()
 
 export default function InvoicesPage() {
+  const { user } = useAuth()
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const { searchTerm, setSearchTerm, clearSearch } = useSearchStore()
   
@@ -86,9 +88,10 @@ export default function InvoicesPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (!user) return
     async function loadInvoices() {
       try {
-        const { data: dbInvs, error } = await supabase
+        let query = supabase
           .from('invoices')
           .select(`
             id,
@@ -103,10 +106,17 @@ export default function InvoicesPage() {
             due_date,
             paid_at,
             notes,
+            vendor_id,
             vendor:vendors(company_name),
             po:purchase_orders(po_number)
           `)
-          .order('created_at', { ascending: false })
+
+        if (user?.role === 'vendor') {
+          const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+          query = query.eq('vendor_id', activeVendorId)
+        }
+
+        const { data: dbInvs, error } = await query.order('created_at', { ascending: false })
 
         if (error) throw error
 
@@ -132,19 +142,28 @@ export default function InvoicesPage() {
         } else {
           // Fallback to local storage or initial values
           const localInvs = JSON.parse(localStorage.getItem('vb_invoices_mock') || '[]')
-          setInvoices([...localInvs, ...initialInvoices])
+          const combined = [...localInvs, ...initialInvoices]
+          if (user?.role === 'vendor') {
+            setInvoices([]) // Protect other vendors' mock invoices
+          } else {
+            setInvoices(combined)
+          }
           setIsDbMode(false)
         }
       } catch (err) {
         const localInvs = JSON.parse(localStorage.getItem('vb_invoices_mock') || '[]')
-        setInvoices([...localInvs, ...initialInvoices])
+        if (user?.role === 'vendor') {
+          setInvoices([])
+        } else {
+          setInvoices([...localInvs, ...initialInvoices])
+        }
         setIsDbMode(false)
       } finally {
         setLoading(false)
       }
     }
     loadInvoices()
-  }, [])
+  }, [user])
 
   const handleMarkAsPaid = async (id: string) => {
     setActionLoadingId(id)
@@ -349,7 +368,7 @@ export default function InvoicesPage() {
                     <Eye size={14} /> View Details
                   </button>
 
-                  {inv.status === 'sent' && (
+                  {inv.status === 'sent' && user?.role !== 'vendor' && (
                     <button
                       onClick={() => handleMarkAsPaid(inv.id)}
                       disabled={actionLoadingId === inv.id}

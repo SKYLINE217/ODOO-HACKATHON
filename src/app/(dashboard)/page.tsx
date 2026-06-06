@@ -89,91 +89,185 @@ export default function DashboardPage() {
   async function loadDashboardData() {
     setLoading(true)
     try {
-      const [rfqRes, vendorRes, approvalRes, spendRes, activityRes, invoiceRes] = await Promise.all([
-        supabase.from('rfqs').select('id, status').order('created_at', { ascending: false }),
-        supabase.from('vendors').select('id, status').order('created_at', { ascending: false }),
-        supabase.from('approvals').select(`
-          id, status, requested_at,
-          quotation:quotations(quotation_number, total_amount, rfq:rfqs(title)),
-          requester:profiles!approvals_requested_by_fkey(full_name)
-        `).eq('status', 'pending').order('requested_at', { ascending: false }).limit(5),
-        supabase.from('invoices').select('total_amount, status').neq('status', 'cancelled'),
-        supabase.from('activity_logs').select(`
-          id, action, description, entity_type, performed_at,
-          performer:profiles!activity_logs_performed_by_fkey(full_name)
-        `).order('performed_at', { ascending: false }).limit(12),
-        supabase.from('invoices').select(`
-          id, invoice_number, status, total_amount, due_date,
-          vendor:vendors(company_name)
-        `).order('created_at', { ascending: false }).limit(5),
-      ])
+      const isVendor = user?.role === 'vendor'
+      const vId = (user as any)?.vendor_id
 
-      // Data extraction with safe fallbacks
-      const rfqs = rfqRes.data || []
-      const activeRfqs = rfqs.filter((r: any) => r.status === 'published').length
-      const draftRfqs = rfqs.filter((r: any) => r.status === 'draft').length
+      if (isVendor) {
+        // Strict Vendor Mode Queries
+        const activeVendorId = vId || '00000000-0000-0000-0000-000000000000'
 
-      const vendors = vendorRes.data || []
-      const activeVendors = vendors.filter((v: any) => v.status === 'active').length
-      const pendingVendors = vendors.filter((v: any) => v.status === 'pending').length
+        const [rfqRes, bidRes, poRes, invoiceRes, activityRes] = await Promise.all([
+          supabase.from('rfqs').select('id, status').neq('status', 'draft'),
+          supabase.from('quotations').select('id, status', { count: 'exact' }).eq('vendor_id', activeVendorId),
+          supabase.from('purchase_orders').select('id, status').eq('vendor_id', activeVendorId),
+          supabase.from('invoices').select(`
+            id, invoice_number, status, total_amount, due_date,
+            vendor:vendors(company_name)
+          `).eq('vendor_id', activeVendorId).order('created_at', { ascending: false }).limit(5),
+          supabase.from('activity_logs').select(`
+            id, action, description, entity_type, performed_at,
+            performer:profiles!activity_logs_performed_by_fkey(full_name)
+          `).order('performed_at', { ascending: false }).limit(20)
+        ])
 
-      const approvalCount = approvalRes.data?.length || 0
+        const rfqs = rfqRes.data || []
+        const activeRfqs = rfqs.filter((r: any) => r.status === 'published').length
 
-      const invoices = spendRes.data || []
-      const totalSpend = invoices.filter((i: any) => i.status === 'paid').reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
-      const totalCommitted = invoices.reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
+        // Count totals
+        const totalBids = bidRes.count || 0
+        const pendingPos = poRes.data?.filter((p: any) => p.status === 'issued' || p.status === 'acknowledged').length || 0
 
-      setKpis([
-        {
-          title: 'Active RFQs',
-          value: String(activeRfqs),
-          change: `${draftRfqs} in draft`,
-          isUp: activeRfqs > 0,
-          subtext: `${rfqs.length} total this cycle`,
-          color: 'indigo',
-          icon: FilePlus
-        },
-        {
-          title: 'Pending Approvals',
-          value: String(approvalCount),
-          change: approvalCount > 2 ? 'Urgent' : 'On track',
-          isUp: false,
-          subtext: 'Requires action',
-          color: 'amber',
-          icon: CheckSquare
-        },
-        {
-          title: 'Active Vendors',
-          value: String(activeVendors),
-          change: `+${pendingVendors} pending`,
-          isUp: true,
-          subtext: `${vendors.length} registered total`,
-          color: 'emerald',
-          icon: UserPlus
-        },
-        {
-          title: 'Total Spend (Paid)',
-          value: formatINR(totalSpend),
-          change: `${formatINR(totalCommitted)} committed`,
-          isUp: true,
-          subtext: 'Including all taxes',
-          color: 'rose',
-          icon: Coins
-        }
-      ])
+        // Get paid spend vs outstanding
+        const allVendorInvoices = invoiceRes.data || []
+        const totalEarnings = allVendorInvoices.filter((i: any) => i.status === 'paid').reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
+        const totalOutstanding = allVendorInvoices.filter((i: any) => i.status !== 'paid' && i.status !== 'cancelled').reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
 
-      setActivities((activityRes.data || []).map((a: any) => ({
-        id: a.id,
-        action: a.action,
-        description: a.description,
-        entity_type: a.entity_type,
-        performed_by_name: a.performer?.full_name || 'System',
-        performed_at: a.performed_at,
-      })))
+        // Vendor KPIs
+        setKpis([
+          {
+            title: 'Active RFQs',
+            value: String(activeRfqs),
+            change: 'Available to Bid',
+            isUp: activeRfqs > 0,
+            subtext: `${rfqs.length} total active tenders`,
+            color: 'indigo',
+            icon: FilePlus
+          },
+          {
+            title: 'Your Submitted Bids',
+            value: String(totalBids),
+            change: 'Active proposals',
+            isUp: true,
+            subtext: 'Submitted quotations',
+            color: 'amber',
+            icon: CheckSquare
+          },
+          {
+            title: 'Pending Orders',
+            value: String(pendingPos),
+            change: 'Awaiting Action',
+            isUp: false,
+            subtext: 'PO acknowledgements',
+            color: 'emerald',
+            icon: UserPlus
+          },
+          {
+            title: 'Earnings (Paid)',
+            value: formatINR(totalEarnings),
+            change: `${formatINR(totalOutstanding)} pending`,
+            isUp: true,
+            subtext: 'Settled invoice totals',
+            color: 'rose',
+            icon: Coins
+          }
+        ])
 
-      setPendingApprovals(approvalRes.data || [])
-      setRecentInvoices(invoiceRes.data || [])
+        // Filter activity logs to only include actions related to their vendor company or name
+        const vendorCompanyName = allVendorInvoices[0]?.vendor?.company_name || ''
+        const filteredLogs = (activityRes.data || []).filter((a: any) => {
+          const desc = (a.description || '').toLowerCase()
+          return desc.includes('vendor') || 
+                 (vendorCompanyName && desc.includes(vendorCompanyName.toLowerCase())) || 
+                 (user?.full_name && desc.includes(user.full_name.toLowerCase()))
+        })
 
+        setActivities(filteredLogs.slice(0, 10).map((a: any) => ({
+          id: a.id,
+          action: a.action,
+          description: a.description,
+          entity_type: a.entity_type,
+          performed_by_name: a.performer?.full_name || 'System',
+          performed_at: a.performed_at,
+        })))
+
+        setPendingApprovals([])
+        setRecentInvoices(allVendorInvoices)
+      } else {
+        // Buyer/Admin/Manager queries (full access)
+        const [rfqRes, vendorRes, approvalRes, spendRes, activityRes, invoiceRes] = await Promise.all([
+          supabase.from('rfqs').select('id, status').order('created_at', { ascending: false }),
+          supabase.from('vendors').select('id, status').order('created_at', { ascending: false }),
+          supabase.from('approvals').select(`
+            id, status, requested_at,
+            quotation:quotations(quotation_number, total_amount, rfq:rfqs(title)),
+            requester:profiles!approvals_requested_by_fkey(full_name)
+          `).eq('status', 'pending').order('requested_at', { ascending: false }).limit(5),
+          supabase.from('invoices').select('total_amount, status').neq('status', 'cancelled'),
+          supabase.from('activity_logs').select(`
+            id, action, description, entity_type, performed_at,
+            performer:profiles!activity_logs_performed_by_fkey(full_name)
+          `).order('performed_at', { ascending: false }).limit(12),
+          supabase.from('invoices').select(`
+            id, invoice_number, status, total_amount, due_date,
+            vendor:vendors(company_name)
+          `).order('created_at', { ascending: false }).limit(5),
+        ])
+
+        const rfqs = rfqRes.data || []
+        const activeRfqs = rfqs.filter((r: any) => r.status === 'published').length
+        const draftRfqs = rfqs.filter((r: any) => r.status === 'draft').length
+
+        const vendors = vendorRes.data || []
+        const activeVendors = vendors.filter((v: any) => v.status === 'active').length
+        const pendingVendors = vendors.filter((v: any) => v.status === 'pending').length
+
+        const approvalCount = approvalRes.data?.length || 0
+
+        const invoices = spendRes.data || []
+        const totalSpend = invoices.filter((i: any) => i.status === 'paid').reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
+        const totalCommitted = invoices.reduce((s: any, i: any) => s + (Number(i.total_amount) || 0), 0)
+
+        setKpis([
+          {
+            title: 'Active RFQs',
+            value: String(activeRfqs),
+            change: `${draftRfqs} in draft`,
+            isUp: activeRfqs > 0,
+            subtext: `${rfqs.length} total this cycle`,
+            color: 'indigo',
+            icon: FilePlus
+          },
+          {
+            title: 'Pending Approvals',
+            value: String(approvalCount),
+            change: approvalCount > 2 ? 'Urgent' : 'On track',
+            isUp: false,
+            subtext: 'Requires action',
+            color: 'amber',
+            icon: CheckSquare
+          },
+          {
+            title: 'Active Vendors',
+            value: String(activeVendors),
+            change: `+${pendingVendors} pending`,
+            isUp: true,
+            subtext: `${vendors.length} registered total`,
+            color: 'emerald',
+            icon: UserPlus
+          },
+          {
+            title: 'Total Spend (Paid)',
+            value: formatINR(totalSpend),
+            change: `${formatINR(totalCommitted)} committed`,
+            isUp: true,
+            subtext: 'Including all taxes',
+            color: 'rose',
+            icon: Coins
+          }
+        ])
+
+        setActivities((activityRes.data || []).map((a: any) => ({
+          id: a.id,
+          action: a.action,
+          description: a.description,
+          entity_type: a.entity_type,
+          performed_by_name: a.performer?.full_name || 'System',
+          performed_at: a.performed_at,
+        })))
+
+        setPendingApprovals(approvalRes.data || [])
+        setRecentInvoices(invoiceRes.data || [])
+      }
     } catch (err) {
       console.error("Dashboard Data Fetch Error:", err)
     } finally {
@@ -206,13 +300,27 @@ export default function DashboardPage() {
 
   return (
     <motion.div className="page-enter" variants={containerVariants} initial="hidden" animate="show" style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      {/* Onboarding Pending Alert */}
+      {user?.role === 'vendor' && !(user as any)?.vendor_id && (
+        <div className="bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl p-4 flex items-center justify-between text-xs gap-3">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle size={18} className="shrink-0 text-amber-400" />
+            <p className="leading-relaxed">
+              <strong>Onboarding Pending:</strong> Your account is registered as a Vendor Partner, but is not yet associated with any Vendor Company. Go to <Link href="/profile" className="underline font-bold text-amber-300">Settings/Profile</Link> or complete <Link href="/onboarding" className="underline font-bold text-amber-300">Onboarding</Link> to establish connection.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Greeting */}
       <motion.div variants={itemVariants}>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.2 }}>
           Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {user?.full_name?.split(' ')[0]} 👋
         </h1>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-          Here's what's happening across your procurement operations today.
+          {user?.role === 'vendor' 
+            ? "Here's what's happening with your vendor portal activities today."
+            : "Here's what's happening across your procurement operations today."}
         </p>
       </motion.div>
 
@@ -260,7 +368,7 @@ export default function DashboardPage() {
             {activities.length === 0 ? (
               <div style={{ padding: '48px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                 <Activity size={28} color="var(--text-muted)" />
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)' }}>No activity yet. Start by creating an RFQ.</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--text-secondary)' }}>No activity logs found matching your vendor ID.</p>
               </div>
             ) : (
               activities.map((item, idx) => {
@@ -302,53 +410,55 @@ export default function DashboardPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Pending Approvals */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <AlertCircle size={15} color="#FBBF24" />
-                <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Needs Approval</h3>
-              </div>
-              <Link href="/approvals" style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>
-                All <ArrowUpRight size={12} />
-              </Link>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {pendingApprovals.length === 0 ? (
-                <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                  <CheckCircle2 size={24} color="#34D399" />
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>All caught up! No pending approvals.</p>
+          {user?.role !== 'vendor' && (
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-default)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <AlertCircle size={15} color="#FBBF24" />
+                  <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '14px', fontWeight: 600, color: 'var(--text-primary)' }}>Needs Approval</h3>
                 </div>
-              ) : (
-                pendingApprovals.map((a: any, idx) => (
-                  <div key={a.id} style={{
-                    padding: '12px 20px',
-                    borderBottom: idx === pendingApprovals.length - 1 ? 'none' : '1px solid var(--border-default)',
-                    display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px',
-                    transition: 'background 150ms'
-                  }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
-                  >
-                    <div style={{ minWidth: 0 }}>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {(a.quotation as any)?.rfq?.title || 'Procurement Approval'}
-                      </p>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                        {(a.quotation as any)?.quotation_number} · by {(a.requester as any)?.full_name}
-                      </p>
-                    </div>
-                    <span style={{
-                      flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600,
-                      color: 'var(--accent)', background: 'var(--accent-subtle)', padding: '2px 6px', borderRadius: '4px',
-                      border: '1px solid rgba(245, 158, 11, 0.2)'
-                    }}>
-                      {formatINR(Number((a.quotation as any)?.total_amount) || 0)}
-                    </span>
+                <Link href="/approvals" style={{ display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--accent)' }}>
+                  All <ArrowUpRight size={12} />
+                </Link>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                {pendingApprovals.length === 0 ? (
+                  <div style={{ padding: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                    <CheckCircle2 size={24} color="#34D399" />
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--text-secondary)' }}>All caught up! No pending approvals.</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  pendingApprovals.map((a: any, idx) => (
+                    <div key={a.id} style={{
+                      padding: '12px 20px',
+                      borderBottom: idx === pendingApprovals.length - 1 ? 'none' : '1px solid var(--border-default)',
+                      display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '8px',
+                      transition: 'background 150ms'
+                    }}
+                    onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'var(--accent-subtle)'}
+                    onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+                    >
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {(a.quotation as any)?.rfq?.title || 'Procurement Approval'}
+                        </p>
+                        <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          {(a.quotation as any)?.quotation_number} · by {(a.requester as any)?.full_name}
+                        </p>
+                      </div>
+                      <span style={{
+                        flexShrink: 0, fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600,
+                        color: 'var(--accent)', background: 'var(--accent-subtle)', padding: '2px 6px', borderRadius: '4px',
+                        border: '1px solid rgba(245, 158, 11, 0.2)'
+                      }}>
+                        {formatINR(Number((a.quotation as any)?.total_amount) || 0)}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Recent Invoices */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>

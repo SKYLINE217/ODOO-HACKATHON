@@ -12,7 +12,7 @@ async function fetchOrCreateProfile(
 ): Promise<UserProfile | null> {
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, full_name, email, role, avatar_url, department, phone')
+    .select('id, full_name, email, role, avatar_url, department, phone, vendor_id')
     .eq('id', userId)
     .single()
 
@@ -27,7 +27,7 @@ async function fetchOrCreateProfile(
       email: fallbackEmail,
       role: 'procurement_officer',
     }, { onConflict: 'id' })
-    .select('id, full_name, email, role, avatar_url, department, phone')
+    .select('id, full_name, email, role, avatar_url, department, phone, vendor_id')
     .single()
 
   return (upserted as UserProfile | null) ?? null
@@ -44,6 +44,7 @@ function sessionToUser(session: any): UserProfile {
     avatar_url: meta.avatar_url || meta.picture || null,
     department: null,
     phone: meta.phone || null,
+    vendor_id: meta.vendor_id || null,
   }
 }
 

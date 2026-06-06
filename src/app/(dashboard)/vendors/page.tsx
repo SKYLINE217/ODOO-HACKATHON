@@ -118,11 +118,18 @@ export default function VendorsPage() {
 
   // Load vendors — SWR: returns cached data instantly, then revalidates in background
   useEffect(() => {
+    if (!user) return
     async function fetchVendors(): Promise<Vendor[]> {
-      const { data, error } = await supabase
+      let query = supabase
         .from('vendors')
         .select('id, company_name, status, contact_person, email, phone, gst_number, rating, total_orders, vendor_categories(name)')
-        .order('created_at', { ascending: false })
+
+      if (user?.role === 'vendor') {
+        const activeVendorId = (user as any)?.vendor_id || '00000000-0000-0000-0000-000000000000'
+        query = query.eq('id', activeVendorId)
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false })
       if (error) throw error
       return (data || []).map((v: any) => ({
         id: v.id,
@@ -138,7 +145,8 @@ export default function VendorsPage() {
       }))
     }
 
-    swr('vendors:list', fetchVendors, (fresh) => {
+    const cacheKey = `vendors:list:${user.role}`
+    swr(cacheKey, fetchVendors, (fresh) => {
       if (fresh.length > 0) setVendors(fresh)
     }).then(data => {
       if (data.length > 0) setVendors(data)
@@ -146,7 +154,7 @@ export default function VendorsPage() {
       const stored = localStorage.getItem('vb_vendors')
       if (stored) try { setVendors(JSON.parse(stored)) } catch { }
     })
-  }, [])
+  }, [user])
 
   const handleAddVendor = async (e: React.FormEvent) => {
     e.preventDefault()

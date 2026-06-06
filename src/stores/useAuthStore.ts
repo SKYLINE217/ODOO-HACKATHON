@@ -9,6 +9,7 @@ export interface UserProfile {
   avatar_url: string | null
   department: string | null
   phone?: string | null
+  vendor_id?: string | null
 }
 
 interface AuthState {
